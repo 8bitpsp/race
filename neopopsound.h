@@ -70,7 +70,7 @@ void sound_init(int SampleRate);
 
 extern BOOL mute;
 
-void dac_update(_u8* dac_buffer, int length_bytes);
+void dac_update(_u16* dac_buffer, int length_bytes);
 void sound_update(_u16* chip_buffer, int length_bytes);
 
 #ifndef __GP32__

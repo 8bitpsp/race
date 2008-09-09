@@ -13,9 +13,6 @@ TARGET=racepsp
 EXTRA_TARGETS=EBOOT.PBP
 PSP_EBOOT_TITLE=$(PSP_APP_NAME) $(PSP_APP_VER)
 #PSP_EBOOT_ICON=$(PSPAPP)/race-icon.png
-#OBJS = gp2x.o \
-#	main.o \
-#	menu.o \
 
 BUILD_EMUL=cz80.o cz80_support.o input.o sound.o neopopsound.o \
            ngpBios.o tlcs900h.o memory.o flash.o graphics.o \

@@ -14,6 +14,7 @@
 #include "flash.h"
 #include "tlcs900h.h"
 
+#include "pl_psp.h"
 #include "pl_snd.h"
 #include "image.h"
 #include "video.h"
@@ -62,10 +63,11 @@ void graphics_paint()
   }
 
   /* Blit screen */
-  pspVideoPutImage(Screen, 
-                   0, 0,
-                   Screen->Viewport.Width, 
-                   Screen->Viewport.Height);
+  sceGuDisable(GU_BLEND);
+  pspVideoPutImage(Screen,
+                   ScreenX, ScreenY,
+                   ScreenW, ScreenH);
+  sceGuEnable(GU_BLEND);
 
   /* Show FPS counter */
   if (1) // Options.ShowFps)
@@ -124,7 +126,11 @@ void RunEmulation()
   pl_snd_resume(0);
 
   /* TODO EMULATE HERE */
+pl_psp_set_clock_freq(333);
+
   ngpc_run();
+
+pl_psp_set_clock_freq(222);
 
   /* Stop sound */
   pl_snd_pause(0);
@@ -136,7 +142,7 @@ static void AudioCallback(pl_snd_sample* buf,
 {
   int length_bytes = samples << 1; /* 2 bytes per sample */
   sound_update((_u16*)buf, length_bytes); //Get sound data
-  dac_update((_u8*)buf, length_bytes);
+  dac_update((_u16*)buf, length_bytes);
 }
 
 /* Release emulation resources */

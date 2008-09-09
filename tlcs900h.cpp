@@ -9009,7 +9009,7 @@ extern unsigned char *ngpScY;
 int ngOverflow = 0;
 
 #define FRAME_RATE_LIMIT  //should we limit the framerate or let it run wild?
-#define FRAMESKIP    //undef this to do no FRAME skipping
+//#define FRAMESKIP    //undef this to do no FRAME skipping
 
 #ifdef FRAMESKIP
 //#define AUTO_FRAMESKIP

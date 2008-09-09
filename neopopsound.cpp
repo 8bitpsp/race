@@ -472,7 +472,7 @@ void dac_mixer(_u16* stream, int length_bytes)
 }
 
 
-void dac_update(_u8* dac_buffer, int length_bytes)
+void dac_update(_u16* dac_buffer, int length_bytes)
 {
 	while (length_bytes > 1)
 	{

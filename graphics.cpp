@@ -26,7 +26,6 @@
 #ifdef TARGET_PSP
 #include "psp/psplib/video.h"
 extern PspImage *Screen;
-void graphics_paint();
 #endif
 
 #define INITGUID
@@ -181,6 +180,165 @@ void graphicsBlitEnd()
 }
 
 
+#ifdef TARGET_PSP
+void graphics_paint();
+#else
+
+// blit the display buffer, if necessary, and put it to the screen
+inline void graphics_paint()
+{
+#ifndef NO_SCREEN_OUTPUT
+
+#ifndef __GP32__
+        //should update only what changed, but test with one that updates entire screen
+#ifndef ZOOM_SUPPORT
+        SDL_UpdateRect(screen, SCREEN_X_OFFSET, SCREEN_Y_OFFSET, BLIT_WIDTH, BLIT_HEIGHT);
+#else
+/*        static int prevZoom=0;
+        if(prevZoom!=zoom)
+            SDL_FillRect(actualScreen, NULL, SDL_MapRGB(screen->format,0,0,0));//fill black
+
+        if(zoom<=0)
+        {
+            SDL_Rect scrRect  = {SCREEN_X_OFFSET, SCREEN_Y_OFFSET, BLIT_WIDTH, BLIT_HEIGHT};
+            SDL_BlitSurface(screen, &scrRect, actualScreen, &scrRect);
+
+            if(prevZoom==zoom)
+                SDL_UpdateRects(actualScreen, 1, &scrRect);
+            else
+                SDL_Flip(actualScreen);
+        }
+        else //if(zoom>0)
+        {
+            SDL_Rect scrRect  = {SCREEN_X_OFFSET, SCREEN_Y_OFFSET, BLIT_WIDTH, BLIT_HEIGHT};
+            SDL_Rect ascrRect = {scrRect.x-zoom, scrRect.y-zoom, scrRect.w+(zoom*2), scrRect.h+(zoom*2)};
+
+            SDL_SoftStretch(screen, &scrRect, actualScreen, &ascrRect);
+            if(prevZoom==zoom)
+                SDL_UpdateRects(actualScreen, 1, &ascrRect);
+            else
+                SDL_Flip(actualScreen);
+        }
+        prevZoom=zoom;*/
+
+//For now, no variable zooming
+        SDL_Rect scrRect  = {SCREEN_X_OFFSET, SCREEN_Y_OFFSET, BLIT_WIDTH, BLIT_HEIGHT};
+        SDL_BlitSurface(screen, &scrRect, actualScreen, &scrRect);
+        SDL_UpdateRects(actualScreen, 1, &scrRect);
+#endif
+        //SDL_UpdateRect(screen, 0, 0, screen->w, screen->h);
+#endif
+        //SDL_Flip(screen);
+    //}
+#endif
+
+#if defined(DO_FPS_DISPLAY) || defined(DO_PERIODIC_FLASH_SAVES)
+    static unsigned int startTime = 0;
+    unsigned int currTime;
+
+    if(startTime == 0)
+        startTime = SDL_GetTicks();
+
+    currTime = SDL_GetTicks();
+
+    if((currTime - startTime) >= 1000)
+    {
+#ifdef DO_PERIODIC_FLASH_SAVES
+		//WRITE_SAVEGAME_IF_DIRTY;
+        if(needToWriteFile && options[PERIODIC_SAVES_OPTION])
+        {
+            if(options[FPS_OPTION])
+                printTTF("S", 10, 10, red, 1, actualScreen, 1);
+            writeSaveGameFile();//we found a dirty one, so write the file
+            if(options[FPS_OPTION])
+                printTTF("S", 10, 10, green, 1, actualScreen, 1);
+        }
+        else
+        {
+#endif
+#ifdef DO_FPS_DISPLAY
+            //SDL_Rect numRect =
+            if(options[FPS_OPTION])
+                drawNumber(frameCount, 10, 10);
+            //SDL_UpdateRect(screen, numRect.x, numRect.y, numRect.w, numRect.h);
+#endif
+#ifdef DO_PERIODIC_FLASH_SAVES
+        }
+#endif
+
+        startTime = currTime;
+        frameCount = 0;
+    }
+
+#endif
+}
+#endif
+
+#if defined(DO_FPS_DISPLAY) || defined(DO_PERIODIC_FLASH_SAVES)
+inline void incFrameCount()
+{
+    frameCount++;
+}
+#endif
+
+void write_screenshot(FILE *f)
+{
+#if 0
+    png_structp  png_ptr;
+    png_infop  info_ptr;
+    png_color_8  sig_bit;
+    png_byte  row[SIZEX*3];
+    int    x,y;
+    unsigned short *p, *gb;
+    png_byte  *rowpt;
+
+    if (NULL == (png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL)))
+        return;
+    if (NULL == (info_ptr = png_create_info_struct(png_ptr)))
+    {
+        png_destroy_write_struct(&png_ptr, png_infopp_NULL);
+        return;
+    }
+    if (setjmp(png_jmpbuf(png_ptr)))
+    {
+        png_destroy_write_struct(&png_ptr, &info_ptr);
+        return;
+    }
+    png_init_io(png_ptr, f);
+    png_set_IHDR(png_ptr, info_ptr,
+                 paintRect.right - paintRect.left,
+                 paintRect.bottom - paintRect.top,
+                 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
+                 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    sig_bit.red = 8;
+    sig_bit.green = 8;
+    sig_bit.blue = 8;
+    png_set_sBIT(png_ptr, info_ptr, &sig_bit);
+    png_write_info(png_ptr, info_ptr);
+    gb = &displayBuffer[SIZEX * 8];
+    for(y = paintRect.bottom - paintRect.top; y; y--)
+    {
+        rowpt = row;
+        p = gb + 8;
+        for(x = paintRect.right - paintRect.left; x; x--)
+        {
+            *rowpt = (totalpalette32[*p]>>16) & 0xFF;
+            rowpt++;
+            *rowpt = (totalpalette32[*p]>>8) & 0xFF;
+            rowpt++;
+            *rowpt = totalpalette32[*p] & 0xFF;
+            rowpt++;
+            p++;
+        }
+        gb+= SIZEX;
+        rowpt = row;
+        png_write_row(png_ptr, rowpt);
+    }
+    png_write_end(png_ptr, info_ptr);
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    return;
+#endif //#if 0
+}
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -189,24 +347,6 @@ void graphicsBlitEnd()
 //////////////////////////////////////////////////////////////////////////////
 
 void (*palette_init)(DWORD dwRBitMask, DWORD dwGBitMask, DWORD dwBBitMask);
-
-#ifdef TARGET_PSP
-void palette_init_psp()
-{
-    int r,g,b;
-
-    switch(m_emuInfo.machine)
-    {
-        case NGP:
-        case NGPC:
-        for (b=0; b<16; b++)
-            for (g=0; g<16; g++)
-                for (r=0; r<16; r++)
-                    totalpalette[b*256+g*16+r] = RGB(r*16, g*16, b*16);
-        break;
-    }
-}
-#endif
 
 void palette_init32(DWORD dwRBitMask, DWORD dwGBitMask, DWORD dwBBitMask)
 {
@@ -919,6 +1059,10 @@ void graphicsBlitLine(unsigned char render)
         {
             unsigned int bw = (m_emuInfo.machine == NGP);
             unsigned short OOWCol = NGPC_TO_SDL16(oowTable[*oowSelect & 0x07]);
+
+#ifndef TARGET_PSP
+            SDL_LockSurface(screen);
+#endif
             if(*scanlineY == 0)
             {
                 if(bw)
@@ -977,6 +1121,9 @@ void graphicsBlitLine(unsigned char render)
                 lineClear(&tCBack, OOWCol);  //in 8-bit mode, this would be the index of OOWCol in the SDL palette
                 //tCBack.gbp  += SIZEX;  //Flavor, I don't get why these were here
             }
+#ifndef TARGET_PSP
+            SDL_UnlockSurface(screen);
+#endif
         }
 
         // increase scanline count
@@ -1367,7 +1514,11 @@ void myGraphicsBlitLine(unsigned char render)
 #endif
 			{
 
+#ifdef TARGET_PSP
 				if (((*scanlineY)&7) == 0)
+#else
+				if (options[HICOLOR_OPTION] || (!options[HICOLOR_OPTION] && ((*scanlineY)&7)==0))
+#endif
 				{
 		            if (bw)
     		        {
@@ -1523,7 +1674,9 @@ BOOL graphics_init(HWND phWnd)
     //Flavor
 
 #ifdef TARGET_PSP
-    palette_init_psp();
+    palette_init = palette_init16;
+    palette_init(0x001f,0x03e0,0x7c00);
+    drawBuffer = (unsigned short*)Screen->Pixels;
 #elif __GP32__
     palette_init = palette_init16;
     palette_init(0xf800,0x07c0,0x003e);
