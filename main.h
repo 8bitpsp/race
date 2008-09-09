@@ -73,6 +73,8 @@ extern EMUINFO		m_emuInfo;
 extern SYSTEMINFO	m_sysInfo[NR_OF_SYSTEMS];
 extern int romSize;
 
+int handleInputFile(char *romName);
+
 #ifdef __GP32__
 #define HOST_FPS 60  //100 was what it was, originally
 #else
