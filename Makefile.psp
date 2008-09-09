@@ -6,8 +6,8 @@ PSPLIB=$(PSPAPP)/psplib
 PSP_FW_VERSION=200
 export PSP_FW_VERSION
 
-PSP_APP_NAME=RACE PSP
-PSP_APP_VER=?.??
+PSP_APP_NAME=RACE! PSP
+PSP_APP_VER=1.0
 
 TARGET=racepsp
 EXTRA_TARGETS=EBOOT.PBP
@@ -18,7 +18,7 @@ BUILD_EMUL=cz80.o cz80_support.o input.o sound.o neopopsound.o \
            ngpBios.o tlcs900h.o memory.o flash.o graphics.o \
            main.o
 BUILD_MZ=ioapi.o unzip.o
-BUILD_PORT=$(PSPAPP)/main.o $(PSPAPP)/emulate.o
+BUILD_PORT=$(PSPAPP)/main.o $(PSPAPP)/emulate.o $(PSPAPP)/menu.o
 
 OBJS=$(BUILD_EMUL) $(BUILD_MZ) $(BUILD_PORT)
 

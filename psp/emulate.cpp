@@ -23,12 +23,12 @@
 #include "pl_util.h"
 
 PspImage *Screen;
+extern int m_bIsActive;
 
 static pl_perf_counter FpsCounter;
 static int ScreenX, ScreenY, ScreenW, ScreenH;
 static int ClearScreen;
 
-int handleInputFile(char *romName);
 static void AudioCallback(pl_snd_sample* buf,
                           unsigned int samples,
                           void *userdata);
@@ -118,21 +118,14 @@ void RunEmulation()
   pl_perf_init_counter(&FpsCounter);
   ClearScreen = 1;
 
-  /* TODO */
-  char *romName = "sonic.rom";
-  handleInputFile(romName);
-
-  /* Initiate sound */
+  /* Resume sound */
   pl_snd_resume(0);
 
-  /* TODO EMULATE HERE */
-pl_psp_set_clock_freq(333);
-
+  /* Resume emulation */
+  m_bIsActive = 1;
   ngpc_run();
 
-pl_psp_set_clock_freq(222);
-
-  /* Stop sound */
+  /* Pause sound */
   pl_snd_pause(0);
 }
 

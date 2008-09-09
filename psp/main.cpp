@@ -9,10 +9,10 @@
 #include "pl_psp.h"
 #include "ctrl.h"
 
+#include "./menu.h"
+
 PSP_MODULE_INFO(PSP_APP_NAME, 0, 1, 1);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
-
-#include "emulate.h"
 
 extern int m_bIsActive;
 
@@ -36,10 +36,10 @@ int main(int argc, char **argv)
                            NULL);
   pl_psp_start_callback_thread();
 
-  if (InitEmulation())
+  if (InitMenu())
   {
-    RunEmulation();
-    TrashEmulation();
+    DisplayMenu();
+    TrashMenu();
   }
 
   /* Release PSP resources */
