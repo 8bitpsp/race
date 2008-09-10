@@ -9009,7 +9009,7 @@ extern unsigned char *ngpScY;
 int ngOverflow = 0;
 
 #define FRAME_RATE_LIMIT  //should we limit the framerate or let it run wild?
-//#define FRAMESKIP    //undef this to do no FRAME skipping
+#define FRAMESKIP    //undef this to do no FRAME skipping
 
 #ifdef FRAMESKIP
 //#define AUTO_FRAMESKIP
@@ -9017,24 +9017,11 @@ int ngOverflow = 0;
 //#define MAX_SKIPFRAMES 2
 #endif
 
-#ifdef AUTO_FRAMESKIP
 inline void tlcs_execute(int cycles, int skipFrames)// skipFrames=how many frames to skip for each frame rendered
-#else
-inline void tlcs_execute(int cycles)
-#endif
 {
     int elapsed;
     int hCounter = ngOverflow;
-
-#ifdef FRAMESKIP
-#ifdef FIXED_FRAMESKIP
-
-    static int frame=FIXED_FRAMESKIP;
-#else
-
-    static int frame=1;
-#endif
-#endif
+    static int frame = skipFrames;
 
 #ifdef TCLS900H_PROFILING
 
@@ -9076,14 +9063,8 @@ inline void tlcs_execute(int cycles)
         if (hCounter < 0)
         {
             // time equivalent to 1 horizontal line has passed
-#ifdef FRAMESKIP
             //graphicsBlitLine(frame == 0);
             myGraphicsBlitLine(frame==0);
-#else
-
-            //graphicsBlitLine(true);
-            myGraphicsBlitLine(true);
-#endif
 
             ngpSoundExecute();
             hCounter+= 515;
@@ -9102,23 +9083,10 @@ inline void tlcs_execute(int cycles)
                 // VBlank
                 if (tlcsMemReadB(0x8000)&0x80)
                     tlcs_interrupt(2);
-#ifdef FRAMESKIP
-#ifdef FIXED_FRAMESKIP
 
-                if(frame == 0)
-                    frame = FIXED_FRAMESKIP;
-#else
-
-                if(frame == 0)
-                {
+                if (frame == 0)
                     frame = skipFrames;
-                    SDL_Rect numRect = drawNumber(skipFrames, 10, 24);
-                    //SDL_UpdateRect(screen, numRect.x, numRect.y, numRect.w, numRect.h);
-                }
-#endif
-                else
-                    frame--;
-#endif
+                else frame--;
             }
 
         }
