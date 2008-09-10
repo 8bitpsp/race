@@ -51,7 +51,7 @@ unsigned char bootBlockStartNum = 31;
 #ifdef __GP32__
 #define SAVEGAME_DIR "dev0:\\GPMM\\NGPC\\BATTERY\\"
 #else
-#define SAVEGAME_DIR "Battery/"
+#define SAVEGAME_DIR "states/"
 #endif
 
 unsigned char currentWriteCycle = 1;  //can be 1 through 6

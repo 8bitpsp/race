@@ -45,7 +45,6 @@ PspImage *Screen;
 extern int m_bIsActive;
 extern psp_ctrl_map_t current_map;
 extern pl_file_path ScreenshotPath;
-extern psp_options_t psp_options;
 
 static pl_perf_counter FpsCounter;
 static int ScreenX, ScreenY, ScreenW, ScreenH;
@@ -147,6 +146,9 @@ void RunEmulation()
 
   /* Pause sound */
   pl_snd_pause(0);
+
+  /* Write flash data for current game */
+  writeSaveGameFile();
 }
 
 void UpdateInputState()

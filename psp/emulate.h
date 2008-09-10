@@ -37,4 +37,6 @@ typedef struct psp_options_t
   uint16_t clock_freq;
 } psp_options_t;
 
+extern psp_options_t psp_options;
+
 #endif

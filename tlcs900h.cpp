@@ -38,6 +38,8 @@
 #include <psprtc.h>
 #include <pspctrl.h>
 #include <psppower.h>
+
+#include "psp/emulate.h"
 #endif
 
 #include <stdio.h>
@@ -9013,15 +9015,32 @@ int ngOverflow = 0;
 
 #ifdef FRAMESKIP
 //#define AUTO_FRAMESKIP
-#define FIXED_FRAMESKIP 1
+//#define FIXED_FRAMESKIP 1
 //#define MAX_SKIPFRAMES 2
 #endif
 
+#ifdef TARGET_PSP
+#define FIXED_FRAMESKIP (psp_options.frame_skip)
+int frame=FIXED_FRAMESKIP;
+#endif
+
+#ifdef AUTO_FRAMESKIP
 inline void tlcs_execute(int cycles, int skipFrames)// skipFrames=how many frames to skip for each frame rendered
+#else
+inline void tlcs_execute(int cycles)
+#endif
 {
     int elapsed;
     int hCounter = ngOverflow;
-    static int frame = skipFrames;
+
+#ifdef FRAMESKIP
+#ifdef FIXED_FRAMESKIP
+//    static int frame=FIXED_FRAMESKIP;
+#else
+
+    static int frame=1;
+#endif
+#endif
 
 #ifdef TCLS900H_PROFILING
 
@@ -9063,8 +9082,14 @@ inline void tlcs_execute(int cycles, int skipFrames)// skipFrames=how many frame
         if (hCounter < 0)
         {
             // time equivalent to 1 horizontal line has passed
+#ifdef FRAMESKIP
             //graphicsBlitLine(frame == 0);
             myGraphicsBlitLine(frame==0);
+#else
+
+            //graphicsBlitLine(true);
+            myGraphicsBlitLine(true);
+#endif
 
             ngpSoundExecute();
             hCounter+= 515;
@@ -9083,10 +9108,23 @@ inline void tlcs_execute(int cycles, int skipFrames)// skipFrames=how many frame
                 // VBlank
                 if (tlcsMemReadB(0x8000)&0x80)
                     tlcs_interrupt(2);
+#ifdef FRAMESKIP
+#ifdef FIXED_FRAMESKIP
 
-                if (frame == 0)
+                if(frame == 0)
+                    frame = FIXED_FRAMESKIP;
+#else
+
+                if(frame == 0)
+                {
                     frame = skipFrames;
-                else frame--;
+                    SDL_Rect numRect = drawNumber(skipFrames, 10, 24);
+                    //SDL_UpdateRect(screen, numRect.x, numRect.y, numRect.w, numRect.h);
+                }
+#endif
+                else
+                    frame--;
+#endif
             }
 
         }
