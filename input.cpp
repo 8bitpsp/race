@@ -106,9 +106,9 @@ extern "C"
 int zoom=0,zoomy=16;
 #endif
 
+#ifndef TARGET_PSP
 void UpdateInputState()
 {
-#ifndef TARGET_PSP
 #ifdef __GP32__
 	int key = gp_getButton();
 
@@ -251,8 +251,8 @@ void UpdateInputState()
         decreaseVolume();
 #endif
 #endif
-#endif /* TARGET_PSP */
 }
+#endif /* TARGET_PSP */
 
 void FreeInput()
 {

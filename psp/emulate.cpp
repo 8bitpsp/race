@@ -13,17 +13,39 @@
 #include "input.h"
 #include "flash.h"
 #include "tlcs900h.h"
+#include "memory.h"
 
 #include "pl_psp.h"
 #include "pl_snd.h"
 #include "image.h"
 #include "video.h"
 #include "pl_perf.h"
+#include "pl_file.h"
 #include "ctrl.h"
 #include "pl_util.h"
 
+psp_ctrl_mask_to_index_map_t physical_to_emulated_button_map[] =
+{
+  { PSP_CTRL_LTRIGGER | PSP_CTRL_RTRIGGER, 16 },
+  { PSP_CTRL_START    | PSP_CTRL_SELECT,   17 },
+  { PSP_CTRL_SELECT   | PSP_CTRL_LTRIGGER, 18 },
+  { PSP_CTRL_SELECT   | PSP_CTRL_RTRIGGER, 19 },
+  { PSP_CTRL_ANALUP,   0 }, { PSP_CTRL_ANALDOWN,  1 },
+  { PSP_CTRL_ANALLEFT, 2 }, { PSP_CTRL_ANALRIGHT, 3 },
+  { PSP_CTRL_UP,   4 }, { PSP_CTRL_DOWN,  5 },
+  { PSP_CTRL_LEFT, 6 }, { PSP_CTRL_RIGHT, 7 },
+  { PSP_CTRL_SQUARE, 8 },  { PSP_CTRL_CROSS,     9 },
+  { PSP_CTRL_CIRCLE, 10 }, { PSP_CTRL_TRIANGLE, 11 },
+  { PSP_CTRL_LTRIGGER, 12 }, { PSP_CTRL_RTRIGGER, 13 },
+  { PSP_CTRL_SELECT, 14 }, { PSP_CTRL_START, 15 },
+  { 0, -1 }
+};
+
 PspImage *Screen;
 extern int m_bIsActive;
+extern psp_ctrl_map_t current_map;
+extern pl_file_path ScreenshotPath;
+extern psp_options_t psp_options;
 
 static pl_perf_counter FpsCounter;
 static int ScreenX, ScreenY, ScreenW, ScreenH;
@@ -43,8 +65,6 @@ int InitEmulation()
   Screen->Viewport.Height = 152;
 
   sound_system_init();
-  system_sound_chipreset();
-  InitInput(NULL);
 
   pl_snd_set_callback(0, AudioCallback, NULL);
 
@@ -70,7 +90,7 @@ void graphics_paint()
   sceGuEnable(GU_BLEND);
 
   /* Show FPS counter */
-  if (1) // Options.ShowFps)
+  if (psp_options.show_fps)
   {
     static char fps_display[64];
     sprintf(fps_display, " %3.02f ", pl_perf_update_counter(&FpsCounter));
@@ -93,7 +113,7 @@ void RunEmulation()
   float ratio;
 
   /* Recompute screen size/position */
-  switch (DISPLAY_MODE_FIT_HEIGHT) //Options.DisplayMode)
+  switch (psp_options.display_mode)
   {
   default:
   case DISPLAY_MODE_UNSCALED:
@@ -127,6 +147,49 @@ void RunEmulation()
 
   /* Pause sound */
   pl_snd_pause(0);
+}
+
+void UpdateInputState()
+{
+  ngpInputState = 0;
+
+  /* Parse input */
+  static SceCtrlData pad;
+  if (pspCtrlPollControls(&pad))
+  {
+#ifdef PSP_DEBUG
+    if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
+      == (PSP_CTRL_SELECT | PSP_CTRL_START))
+        pl_util_save_vram_seq(ScreenshotPath, "game");
+#endif
+
+    psp_ctrl_mask_to_index_map_t *current_mapping = physical_to_emulated_button_map;
+    for (; current_mapping->mask; current_mapping++)
+    {
+      u32 code = current_map.button_map[current_mapping->index];
+      u8  on = (pad.Buttons & current_mapping->mask) == current_mapping->mask;
+
+      /* Check to see if a button set is pressed. If so, unset it, so it */
+      /* doesn't trigger any other combination presses. */
+      if (on) pad.Buttons &= ~current_mapping->mask;
+
+      if (code & JST)
+      {
+        if (on) ngpInputState |= CODE_MASK(code);
+        continue;
+      }
+
+      if (code & SPC)
+      {
+        switch (CODE_MASK(code))
+        {
+        case SPC_MENU:
+          if (on) m_bIsActive = 0;
+          break;
+        }
+      }
+    }
+  }
 }
 
 static void AudioCallback(pl_snd_sample* buf,

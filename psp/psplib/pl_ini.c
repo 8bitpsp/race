@@ -63,7 +63,9 @@ int pl_ini_create(pl_ini_file *file)
 
 int pl_ini_load(pl_ini_file *file,
                 const char *path)
-{
+{ 
+  file->head = NULL;
+
   FILE *stream;
   if (!(stream = fopen(path, "r"))) 
     return 0;
@@ -79,7 +81,6 @@ int pl_ini_load(pl_ini_file *file,
   /* Create unnamed section */
   current_section = NULL;
   tail = NULL;
-  file->head = NULL;
 
   while(!feof(stream) && fgets(string, sizeof(string), stream))
   {
