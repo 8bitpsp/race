@@ -279,6 +279,7 @@ int InitMenu()
   /* Initialize paths */
   sprintf(SaveStatePath, "%sstates/", pl_psp_get_app_directory());
   sprintf(ScreenshotPath, "%sscreens/", pl_psp_get_app_directory());
+  sprintf(GamePath, "%s", pl_psp_get_app_directory());
 
   /* Load the background image */
   Background = pspImageLoadPng("background.png");
@@ -304,22 +305,22 @@ int InitMenu()
   UiMetric.ScrollbarWidth = 10;
   UiMetric.TextColor = PSP_COLOR_GRAY;
   UiMetric.SelectedColor = COLOR(0xf7,0xc2,0x50,0xFF);
-  UiMetric.SelectedBgColor = COLOR(0x46,0x98,0xce,0x99);
+  UiMetric.SelectedBgColor = COLOR(0xd5,0xf1,0x17,0x99);
   UiMetric.StatusBarColor = PSP_COLOR_WHITE;
   UiMetric.BrowserFileColor = PSP_COLOR_GRAY;
   UiMetric.BrowserDirectoryColor = PSP_COLOR_YELLOW;
   UiMetric.GalleryIconsPerRow = 5;
   UiMetric.GalleryIconMarginWidth = 8;
   UiMetric.MenuItemMargin = 20;
-  UiMetric.MenuSelOptionBg = PSP_COLOR_BLACK;
+  UiMetric.MenuSelOptionBg = PSP_COLOR_GRAY;
   UiMetric.MenuOptionBoxColor = PSP_COLOR_GRAY;
-  UiMetric.MenuOptionBoxBg = COLOR(0x46,0x98,0xce,0xCC);
+  UiMetric.MenuOptionBoxBg = COLOR(0x44,0x00,0x00,0xbb);
   UiMetric.MenuDecorColor = UiMetric.SelectedColor;
-  UiMetric.DialogFogColor = COLOR(0x59,0x91,0x38,0xBB);
+  UiMetric.DialogFogColor = COLOR(0xd5,0xf1,0x17,0xbb);
   UiMetric.TitlePadding = 4;
   UiMetric.TitleColor = PSP_COLOR_WHITE;
   UiMetric.MenuFps = 30;
-  UiMetric.TabBgColor = COLOR(0xa4,0xa4,0xa4,0xff);
+  UiMetric.TabBgColor = COLOR(0xcc,0x73,0x73,0xff);
 
   TabIndex = TAB_ABOUT;
 
@@ -745,8 +746,8 @@ static void psp_load_options()
 
   psp_options.display_mode = pl_ini_get_int(&file, "Video", "Display Mode", 
                                             DISPLAY_MODE_UNSCALED);
-  psp_options.frame_skip = pl_ini_get_int(&file, "Video", "Frame Skipping", 1);
-  psp_options.clock_freq = pl_ini_get_int(&file, "Video", "PSP Clock Frequency", 266);
+  psp_options.frame_skip = pl_ini_get_int(&file, "Video", "Frame Skipping", 0);
+  psp_options.clock_freq = pl_ini_get_int(&file, "Video", "PSP Clock Frequency", 333);
   psp_options.show_fps = pl_ini_get_int(&file, "Video", "Show FPS", 0);
   pl_ini_get_string(&file, "File", "Game Path", NULL, 
                     GamePath, sizeof(GamePath));
@@ -781,7 +782,7 @@ static int psp_save_options()
                  psp_options.show_fps);
   pl_ini_set_int(&file, "Menu", "Control Mode", 
                  (UiMetric.OkButton == PSP_CTRL_CIRCLE));
-  pl_ini_set_int(&file, "Menu", "Animate", 
+  pl_ini_set_int(&file, "Menu", "Animate",
                  UiMetric.Animate);
   pl_ini_set_string(&file, "File", "Game Path",
                     GamePath);
