@@ -17,6 +17,18 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+extern unsigned long gen_regsPC, gen_regsSR;
+extern unsigned char F2;
+extern unsigned long
+  gen_regsXWA0, gen_regsXBC0, gen_regsXDE0, gen_regsXHL0,
+  gen_regsXWA1, gen_regsXBC1, gen_regsXDE1, gen_regsXHL1,
+  gen_regsXWA2, gen_regsXBC2, gen_regsXDE2, gen_regsXHL2,
+  gen_regsXWA3, gen_regsXBC3, gen_regsXDE3, gen_regsXHL3,
+  gen_regsXIX,  gen_regsXIY,  gen_regsXIZ,  gen_regsXSP,
+  gen_regsSP,   gen_regsXSSP, gen_regsXNSP;
+extern int timer0, timer1, timer2, timer3;
+extern unsigned char __attribute__ ((__aligned__(4))) ldcRegs[64];
+
 #define XWA0	0
 #define XBC0	1
 #define XDE0	2

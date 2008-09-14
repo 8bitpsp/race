@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,13 +9,6 @@
 
 #include "emulate.h"
 
-#include "StdAfx.h"
-#include "neopopsound.h"
-#include "input.h"
-#include "flash.h"
-#include "tlcs900h.h"
-#include "memory.h"
-
 #include "pl_psp.h"
 #include "pl_snd.h"
 #include "image.h"
@@ -23,6 +17,15 @@
 #include "pl_file.h"
 #include "ctrl.h"
 #include "pl_util.h"
+
+#include "StdAfx.h"
+#include "neopopsound.h"
+#include "input.h"
+#include "flash.h"
+#include "tlcs900h.h"
+#include "memory.h"
+#include "cz80.h"
+#include "state.h"
 
 psp_ctrl_mask_to_index_map_t physical_to_emulated_button_map[] =
 {
@@ -159,6 +162,10 @@ void UpdateInputState()
   static SceCtrlData pad;
   if (pspCtrlPollControls(&pad))
   {
+    if (pad.Buttons & PSP_CTRL_SQUARE)
+        state_store("foo.sta");
+    if (pad.Buttons & PSP_CTRL_TRIANGLE)
+        state_restore("foo.sta");
 #ifdef PSP_DEBUG
     if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
       == (PSP_CTRL_SELECT | PSP_CTRL_START))

@@ -7,16 +7,16 @@ PSP_FW_VERSION=200
 export PSP_FW_VERSION
 
 PSP_APP_NAME=RACE! PSP
-PSP_APP_VER=1.0
+PSP_APP_VER=2.1
 
 TARGET=racepsp
 EXTRA_TARGETS=EBOOT.PBP
 PSP_EBOOT_TITLE=$(PSP_APP_NAME) $(PSP_APP_VER)
 PSP_EBOOT_ICON=$(PSPAPP)/race-icon.png
 
-BUILD_EMUL=cz80.o cz80_support.o input.o sound.o neopopsound.o \
+BUILD_EMUL=cz80.o cz80_support.o input.o neopopsound.o \
            ngpBios.o tlcs900h.o memory.o flash.o graphics.o \
-           main.o
+           main.o state.o sound.o
 BUILD_MZ=ioapi.o unzip.o
 BUILD_PORT=$(PSPAPP)/main.o $(PSPAPP)/emulate.o $(PSPAPP)/menu.o
 

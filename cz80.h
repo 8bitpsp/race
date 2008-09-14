@@ -2,7 +2,7 @@
 /*                                                                              */
 /* CZ80 include file                                                            */
 /* C Z80 emulator version 0.92                                                  */
-/* Copyright 2004-2005 Stéphane Dallongeville                                   */
+/* Copyright 2004-2005 Stï¿½phane Dallongeville                                   */
 /*                                                                              */
 /********************************************************************************/
 
@@ -136,6 +136,10 @@ typedef union
 	u16 W;
 	s16 SW;
 } union16;
+
+#ifdef PC
+#undef PC
+#endif
 
 typedef struct
 {
