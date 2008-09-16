@@ -27,7 +27,7 @@ extern unsigned long
   gen_regsXIX,  gen_regsXIY,  gen_regsXIZ,  gen_regsXSP,
   gen_regsSP,   gen_regsXSSP, gen_regsXNSP;
 extern int timer0, timer1, timer2, timer3;
-extern unsigned char __attribute__ ((__aligned__(4))) ldcRegs[64];
+extern unsigned char ldcRegs[64];
 
 #define XWA0	0
 #define XBC0	1

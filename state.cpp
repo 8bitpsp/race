@@ -3,25 +3,31 @@
 #include "memory.h"
 #include <string.h>
 
+#ifdef PC
+#undef PC
+#endif
+
 //-----------------------------------------------------------------------------
 // state_restore()
 //-----------------------------------------------------------------------------
 BOOL state_restore(char* filename)
 {
-  RACE_STATE state;
+  RACE_STATE rs;
 
-  /* Load */
+  // Load
   FILE *stream;
   if (!(stream = fopen(filename, "r")))
     return 0;
 
-  if (fread(&state, sizeof(state), 1, stream) < 1)
+  if (fread(&rs, sizeof(rs), 1, stream) < 1)
   {
     fclose(stream);
     return 0;
   }
 
   fclose(stream);
+
+  system_sound_chipreset();
 
 // TODO 
   //Build a state description
@@ -31,138 +37,163 @@ BOOL state_restore(char* filename)
 //  state.eepromStatusEnable = eepromStatusEnable;
 
   //TLCS-900h Registers
-  gen_regsPC = state.pc;
-  gen_regsSR = state.sr;
-  F2 = state.f_dash;
+  gen_regsPC = rs.pc;
+  gen_regsSR = rs.sr;
+  F2 = rs.f_dash;
 
-  int i = 0;
-  gen_regsXWA0 = state.gpr[i++];
-  gen_regsXBC0 = state.gpr[i++];
-  gen_regsXDE0 = state.gpr[i++];
-  gen_regsXHL0 = state.gpr[i++];
+  int i = 0, j;
+  gen_regsXWA0 = rs.gpr[i++];
+  gen_regsXBC0 = rs.gpr[i++];
+  gen_regsXDE0 = rs.gpr[i++];
+  gen_regsXHL0 = rs.gpr[i++];
 
-  gen_regsXWA1 = state.gpr[i++];
-  gen_regsXBC1 = state.gpr[i++];
-  gen_regsXDE1 = state.gpr[i++];
-  gen_regsXHL1 = state.gpr[i++];
+  gen_regsXWA1 = rs.gpr[i++];
+  gen_regsXBC1 = rs.gpr[i++];
+  gen_regsXDE1 = rs.gpr[i++];
+  gen_regsXHL1 = rs.gpr[i++];
 
-  gen_regsXWA2 = state.gpr[i++];
-  gen_regsXBC2 = state.gpr[i++];
-  gen_regsXDE2 = state.gpr[i++];
-  gen_regsXHL2 = state.gpr[i++];
+  gen_regsXWA2 = rs.gpr[i++];
+  gen_regsXBC2 = rs.gpr[i++];
+  gen_regsXDE2 = rs.gpr[i++];
+  gen_regsXHL2 = rs.gpr[i++];
 
-  gen_regsXWA3 = state.gpr[i++];
-  gen_regsXBC3 = state.gpr[i++];
-  gen_regsXDE3 = state.gpr[i++];
-  gen_regsXHL3 = state.gpr[i++];
+  gen_regsXWA3 = rs.gpr[i++];
+  gen_regsXBC3 = rs.gpr[i++];
+  gen_regsXDE3 = rs.gpr[i++];
+  gen_regsXHL3 = rs.gpr[i++];
 
-  gen_regsXIX = state.gpr[i++];
-  gen_regsXIY = state.gpr[i++];
-  gen_regsXIZ = state.gpr[i++];
-  gen_regsXSP = state.gpr[i++];
+  gen_regsXIX = rs.gpr[i++];
+  gen_regsXIY = rs.gpr[i++];
+  gen_regsXIZ = rs.gpr[i++];
+  gen_regsXSP = rs.gpr[i++];
 
-  gen_regsSP = state.gpr[i++];
-  gen_regsXSSP = state.gpr[i++];
-  gen_regsXNSP = state.gpr[i++];
-
+  gen_regsSP = rs.gpr[i++];
+  gen_regsXSSP = rs.gpr[i++];
+  gen_regsXNSP = rs.gpr[i++];
+#if 0
+  extern u8 interruptPendingLevel, pendingInterrupts[7][INT_QUEUE_MAX];
+  interruptPendingLevel = rs.interruptPendingLevel;
+  for (i = 0; i < 7; i++)
+    for (j = 0; j < INT_QUEUE_MAX; j++)
+      pendingInterrupts[i][j] = rs.pendingInterrupts[i][j];
+  extern int state, checkstate, DMAstate;
+  state = rs.state;
+  checkstate = rs.checkstate;
+  DMAstate = rs.DMAstate;
+#endif
   //Z80 Registers
   extern cz80_struc RACE_cz80_struc;
-  memcpy(&RACE_cz80_struc, &state.RACE_cz80_struc, sizeof(cz80_struc));
+  extern s32 Z80_ICount;
+  memcpy(&RACE_cz80_struc, &rs.RACE_cz80_struc, sizeof(cz80_struc));
+  Z80_ICount = rs.Z80_ICount;
 
   //Sound Chips
   extern int sndCycles;
-  sndCycles = state.sndCycles;
-  memcpy(&toneChip, &state.toneChip, sizeof(SoundChip));
-  memcpy(&noiseChip, &state.noiseChip, sizeof(SoundChip));
+  sndCycles = rs.sndCycles;
+  memcpy(&toneChip, &rs.toneChip, sizeof(SoundChip));
+  memcpy(&noiseChip, &rs.noiseChip, sizeof(SoundChip));
 
   //Timers
-  timer0 = state.timer0;
-  timer1 = state.timer1;
-  timer2 = state.timer2;
-  timer3 = state.timer3;
+  timer0 = rs.timer0;
+  timer1 = rs.timer1;
+  timer2 = rs.timer2;
+  timer3 = rs.timer3;
 
   //DMA
-  memcpy(&ldcRegs, &state.ldcRegs, sizeof(ldcRegs));
+  memcpy(&ldcRegs, &rs.ldcRegs, sizeof(ldcRegs));
 
   //Memory
-  memcpy(&mainram, &state.mainram, 0xC000);
+  memcpy(mainram, rs.mainram, sizeof(rs.mainram));
 
   return 1;
 }
 
 int state_store(char* filename)
 {
-  RACE_STATE state;
+  RACE_STATE rs;
 
   //Build a state description
-  state.valid_state_id = 0x0050;
+  rs.valid_state_id = 0x0050;
 // TODO  memcpy(&state.header, rom_header, sizeof(RomHeader));
 
 //  state.eepromStatusEnable = eepromStatusEnable;
 
   //TLCS-900h Registers
-  state.pc = gen_regsPC;
-  state.sr = gen_regsSR;
-  state.f_dash = F2;
+  rs.pc = gen_regsPC;
+  rs.sr = gen_regsSR;
+  rs.f_dash = F2;
 
-  int i = 0;
-  state.gpr[i++] = gen_regsXWA0;
-  state.gpr[i++] = gen_regsXBC0;
-  state.gpr[i++] = gen_regsXDE0;
-  state.gpr[i++] = gen_regsXHL0;
+  int i = 0, j;
+  rs.gpr[i++] = gen_regsXWA0;
+  rs.gpr[i++] = gen_regsXBC0;
+  rs.gpr[i++] = gen_regsXDE0;
+  rs.gpr[i++] = gen_regsXHL0;
 
-  state.gpr[i++] = gen_regsXWA1;
-  state.gpr[i++] = gen_regsXBC1;
-  state.gpr[i++] = gen_regsXDE1;
-  state.gpr[i++] = gen_regsXHL1;
+  rs.gpr[i++] = gen_regsXWA1;
+  rs.gpr[i++] = gen_regsXBC1;
+  rs.gpr[i++] = gen_regsXDE1;
+  rs.gpr[i++] = gen_regsXHL1;
 
-  state.gpr[i++] = gen_regsXWA2;
-  state.gpr[i++] = gen_regsXBC2;
-  state.gpr[i++] = gen_regsXDE2;
-  state.gpr[i++] = gen_regsXHL2;
+  rs.gpr[i++] = gen_regsXWA2;
+  rs.gpr[i++] = gen_regsXBC2;
+  rs.gpr[i++] = gen_regsXDE2;
+  rs.gpr[i++] = gen_regsXHL2;
 
-  state.gpr[i++] = gen_regsXWA3;
-  state.gpr[i++] = gen_regsXBC3;
-  state.gpr[i++] = gen_regsXDE3;
-  state.gpr[i++] = gen_regsXHL3;
+  rs.gpr[i++] = gen_regsXWA3;
+  rs.gpr[i++] = gen_regsXBC3;
+  rs.gpr[i++] = gen_regsXDE3;
+  rs.gpr[i++] = gen_regsXHL3;
 
-  state.gpr[i++] = gen_regsXIX;
-  state.gpr[i++] = gen_regsXIY;
-  state.gpr[i++] = gen_regsXIZ;
-  state.gpr[i++] = gen_regsXSP;
+  rs.gpr[i++] = gen_regsXIX;
+  rs.gpr[i++] = gen_regsXIY;
+  rs.gpr[i++] = gen_regsXIZ;
+  rs.gpr[i++] = gen_regsXSP;
 
-  state.gpr[i++] = gen_regsSP;
-  state.gpr[i++] = gen_regsXSSP;
-  state.gpr[i++] = gen_regsXNSP;
+  rs.gpr[i++] = gen_regsSP;
+  rs.gpr[i++] = gen_regsXSSP;
+  rs.gpr[i++] = gen_regsXNSP;
+#if 0
+  extern u8 interruptPendingLevel, pendingInterrupts[7][INT_QUEUE_MAX];
+  rs.interruptPendingLevel = interruptPendingLevel;
+  for (i = 0; i < 7; i++)
+    for (j = 0; j < INT_QUEUE_MAX; j++)
+      rs.pendingInterrupts[i][j] = pendingInterrupts[i][j];
 
+  extern int state, checkstate, DMAstate;
+  rs.state = state;
+  rs.checkstate = checkstate;
+  rs.DMAstate = DMAstate;
+#endif
   //Z80 Registers
   extern cz80_struc RACE_cz80_struc;
-  memcpy(&state.RACE_cz80_struc, &RACE_cz80_struc, sizeof(cz80_struc));
+  extern s32 Z80_ICount;
+  memcpy(&rs.RACE_cz80_struc, &RACE_cz80_struc, sizeof(cz80_struc));
+  rs.Z80_ICount = Z80_ICount;
 
   //Sound Chips
   extern int sndCycles;
-  state.sndCycles = sndCycles;
-  memcpy(&state.toneChip, &toneChip, sizeof(SoundChip));
-  memcpy(&state.noiseChip, &noiseChip, sizeof(SoundChip));
+  rs.sndCycles = sndCycles;
+  memcpy(&rs.toneChip, &toneChip, sizeof(SoundChip));
+  memcpy(&rs.noiseChip, &noiseChip, sizeof(SoundChip));
 
   //Timers
-  state.timer0 = timer0;
-  state.timer1 = timer1;
-  state.timer2 = timer2;
-  state.timer3 = timer3;
+  rs.timer0 = timer0;
+  rs.timer1 = timer1;
+  rs.timer2 = timer2;
+  rs.timer3 = timer3;
 
   //DMA
-  memcpy(&state.ldcRegs, &ldcRegs, sizeof(ldcRegs));
+  memcpy(&rs.ldcRegs, &ldcRegs, sizeof(ldcRegs));
 
   //Memory
-  memcpy(&state.mainram, &mainram, 0xC000);
+  memcpy(rs.mainram, mainram, sizeof(rs.mainram));
 
   // Save
   FILE *stream;
   if (!(stream = fopen(filename, "w")))
     return 0;
 
-  if (fwrite(&state, sizeof(state), 1, stream) < 1)
+  if (fwrite(&rs, sizeof(rs), 1, stream) < 1)
   {
     fclose(stream);
     return 0;
@@ -172,74 +203,3 @@ int state_store(char* filename)
 
   return 1;
 }
-
-#if 0
-//=============================================================================
-
-static void read_state_0050(char* filename)
-{
-	NEOPOPSTATE0050	state;
-	int i,j;
-
-	if (system_io_state_read(filename, (_u8*)&state, sizeof(NEOPOPSTATE0050)))
-	{
-		//Verify correct rom...
-		if (memcmp(rom_header, &state.header, sizeof(RomHeader)) != 0)
-		{
-			system_message(system_get_string(IDS_WRONGROM));
-			return;
-		}
-
-		//Apply state description
-		reset();
-
-		eepromStatusEnable = state.eepromStatusEnable;
-
-		//TLCS-900h Registers
-		pc = state.pc;
-		sr = state.sr;				changedSP();
-		f_dash = state.f_dash;
-
-		eepromStatusEnable = state.eepromStatusEnable;
-
-		for (i = 0; i < 4; i++)
-		{
-			gpr[i] = state.gpr[i];
-			for (j = 0; j < 4; j++)
-				gprBank[i][j] = state.gprBank[i][j];
-		}
-
-		//Timers
-		timer_hint = state.timer_hint;
-
-		for (i = 0; i < 4; i++)	//Up-counters
-			timer[i] = state.timer[i];
-
-		timer_clock0 = state.timer_clock0;
-		timer_clock1 = state.timer_clock1;
-		timer_clock2 = state.timer_clock2;
-		timer_clock3 = state.timer_clock3;
-
-		//Z80 Registers
-		memcpy(&Z80_regs, &state.Z80_regs, sizeof(Z80));
-
-		//Sound Chips
-		memcpy(&toneChip, &state.toneChip, sizeof(SoundChip));
-		memcpy(&noiseChip, &state.noiseChip, sizeof(SoundChip));
-
-		//DMA
-		for (i = 0; i < 4; i++)
-		{
-			dmaS[i] = state.dmaS[i];
-			dmaD[i] = state.dmaD[i];
-			dmaC[i] = state.dmaC[i];
-			dmaM[i] = state.dmaM[i];
-		}
-
-		//Memory
-		memcpy(ram, &state.ram, 0xC000);
-	}
-}
-
-//=============================================================================
-#endif

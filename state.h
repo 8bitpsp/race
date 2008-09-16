@@ -8,18 +8,29 @@
 // State Definitions:
 //-----------------------------------------------------------------------------
 
+#define INT_QUEUE_MAX 4
+
 typedef struct
 {
 	//Save State Id
-	unsigned short valid_state_id; // = 0x0050
+	u16 valid_state_id; // = 0x0050
 
 	//Memory
-	unsigned char mainram[0xC000];
+	u8 mainram[0x38000];// 0xC000];
 
 	//TLCS-900h Registers
-	unsigned int pc, sr;
-	unsigned char f_dash;
-	unsigned int gpr[23];
+	u32 pc, sr;
+	u8 f_dash;
+	u32 gpr[23];
+
+  // these 5 may not be necessary
+#if 0
+  u8 interruptPendingLevel;
+  u8 pendingInterrupts[7][INT_QUEUE_MAX];
+  int state;
+  int checkstate;
+  int DMAstate;
+#endif
 
 #if 0
 	BOOL eepromStatusEnable;
@@ -27,6 +38,7 @@ typedef struct
 
   //Z80 Registers
   cz80_struc RACE_cz80_struc;
+  s32 Z80_ICount;
 
   //Sound Chips
   int sndCycles;
@@ -37,7 +49,7 @@ typedef struct
   int timer0, timer1, timer2, timer3;
 
 	//DMA
-  unsigned char ldcRegs[64];
+  u8 ldcRegs[64];
 
 #if 0
 	//Rom Description

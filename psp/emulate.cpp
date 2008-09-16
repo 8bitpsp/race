@@ -24,6 +24,11 @@
 #include "flash.h"
 #include "tlcs900h.h"
 #include "memory.h"
+
+#ifdef PC
+#undef PC
+#endif
+
 #include "cz80.h"
 #include "state.h"
 

@@ -137,10 +137,6 @@ typedef union
 	s16 SW;
 } union16;
 
-#ifdef PC
-#undef PC
-#endif
-
 typedef struct
 {
     union
