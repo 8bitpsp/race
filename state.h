@@ -24,7 +24,7 @@ typedef struct
 	u32 gpr[23];
 
   // these 5 may not be necessary
-#if 0
+#if 1
   u8 interruptPendingLevel;
   u8 pendingInterrupts[7][INT_QUEUE_MAX];
   int state;
@@ -38,6 +38,8 @@ typedef struct
 
   //Z80 Registers
   cz80_struc RACE_cz80_struc;
+  u32 PC_offset;
+  u8  PC_is_null;
   s32 Z80_ICount;
 
   //Sound Chips

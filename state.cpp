@@ -27,7 +27,25 @@ BOOL state_restore(char* filename)
 
   fclose(stream);
 
-  system_sound_chipreset();
+  mem_init();
+  tlcs_init();
+  Z80_Init();
+  Z80_Reset();
+
+  // if neogeo pocket color rom, act if we are a neogeo pocket color
+  tlcsMemWriteB(0x6F91,tlcsMemReadB(0x00200023));
+  // pretend we're running in English mode
+  tlcsMemWriteB(0x00006F87,0x01);
+  // kludges & fixes
+  switch (tlcsMemReadW(0x00200020))
+  {
+      case 0x0059:  // Sonic
+      case 0x0061:  // Metal SLug 2nd
+          *get_address(0x0020001F) = 0xFF;
+          break;
+  }
+
+  ngpSoundOff();
 
 // TODO 
   //Build a state description
@@ -70,7 +88,7 @@ BOOL state_restore(char* filename)
   gen_regsSP = rs.gpr[i++];
   gen_regsXSSP = rs.gpr[i++];
   gen_regsXNSP = rs.gpr[i++];
-#if 0
+#if 1
   extern u8 interruptPendingLevel, pendingInterrupts[7][INT_QUEUE_MAX];
   interruptPendingLevel = rs.interruptPendingLevel;
   for (i = 0; i < 7; i++)
@@ -84,8 +102,13 @@ BOOL state_restore(char* filename)
   //Z80 Registers
   extern cz80_struc RACE_cz80_struc;
   extern s32 Z80_ICount;
+  unsigned char *mame4all_cz80_rom = &mainram[0x3000];
+
   memcpy(&RACE_cz80_struc, &rs.RACE_cz80_struc, sizeof(cz80_struc));
+
   Z80_ICount = rs.Z80_ICount;
+  RACE_cz80_struc.PC = (rs.PC_is_null)
+                       ? 0 : (u8*)((u32)mame4all_cz80_rom + rs.PC_offset);
 
   //Sound Chips
   extern int sndCycles;
@@ -104,6 +127,10 @@ BOOL state_restore(char* filename)
 
   //Memory
   memcpy(mainram, rs.mainram, sizeof(rs.mainram));
+
+  tlcs_reinit();
+  extern int ngpRunning;
+  ngpRunning = 1;
 
   return 1;
 }
@@ -152,7 +179,7 @@ int state_store(char* filename)
   rs.gpr[i++] = gen_regsSP;
   rs.gpr[i++] = gen_regsXSSP;
   rs.gpr[i++] = gen_regsXNSP;
-#if 0
+#if 1
   extern u8 interruptPendingLevel, pendingInterrupts[7][INT_QUEUE_MAX];
   rs.interruptPendingLevel = interruptPendingLevel;
   for (i = 0; i < 7; i++)
@@ -167,8 +194,14 @@ int state_store(char* filename)
   //Z80 Registers
   extern cz80_struc RACE_cz80_struc;
   extern s32 Z80_ICount;
+  unsigned char *mame4all_cz80_rom = &mainram[0x3000];
+
   memcpy(&rs.RACE_cz80_struc, &RACE_cz80_struc, sizeof(cz80_struc));
   rs.Z80_ICount = Z80_ICount;
+
+  rs.PC_is_null = !RACE_cz80_struc.PC;
+  rs.PC_offset = (RACE_cz80_struc.PC) 
+                 ? ((u32)RACE_cz80_struc.PC - (u32)mame4all_cz80_rom) : 0;
 
   //Sound Chips
   extern int sndCycles;

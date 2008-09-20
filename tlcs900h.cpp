@@ -8542,6 +8542,104 @@ void tlcs_init()
     //saved_my_pc = my_pc;
 }
 
+void tlcs_reinit()
+{
+    int i,j;
+
+    // initialize pointer structure for access to all registers in byte mode
+    allregsB[0x00] = (unsigned char *)&gen_regsXWA0;
+    allregsB[0x04] = (unsigned char *)&gen_regsXBC0;
+    allregsB[0x08] = (unsigned char *)&gen_regsXDE0;
+    allregsB[0x0c] = (unsigned char *)&gen_regsXHL0;
+    allregsB[0x10] = (unsigned char *)&gen_regsXWA1;
+    allregsB[0x14] = (unsigned char *)&gen_regsXBC1;
+    allregsB[0x18] = (unsigned char *)&gen_regsXDE1;
+    allregsB[0x1c] = (unsigned char *)&gen_regsXHL1;
+    allregsB[0x20] = (unsigned char *)&gen_regsXWA2;
+    allregsB[0x24] = (unsigned char *)&gen_regsXBC2;
+    allregsB[0x28] = (unsigned char *)&gen_regsXDE2;
+    allregsB[0x2c] = (unsigned char *)&gen_regsXHL2;
+    allregsB[0x30] = (unsigned char *)&gen_regsXWA3;
+    allregsB[0x34] = (unsigned char *)&gen_regsXBC3;
+    allregsB[0x38] = (unsigned char *)&gen_regsXDE3;
+    allregsB[0x3c] = (unsigned char *)&gen_regsXHL3;
+    allregsB[0xf0] = (unsigned char *)&gen_regsXIX;
+    allregsB[0xf4] = (unsigned char *)&gen_regsXIY;
+    allregsB[0xf8] = (unsigned char *)&gen_regsXIZ;
+    allregsB[0xfc] = (unsigned char *)&gen_regsXSP;
+
+    for (j=0;j<256;j+=4)
+    {
+        allregsB[j+1] = allregsB[j]+1;
+        allregsB[j+2] = allregsB[j]+2;
+        allregsB[j+3] = allregsB[j]+3;
+    }
+
+    // initialize pointer structure for access to all registers in word mode
+    allregsW[0x00] = (unsigned short *)&gen_regsXWA0;
+    allregsW[0x04] = (unsigned short *)&gen_regsXBC0;
+    allregsW[0x08] = (unsigned short *)&gen_regsXDE0;
+    allregsW[0x0c] = (unsigned short *)&gen_regsXHL0;
+    allregsW[0x10] = (unsigned short *)&gen_regsXWA1;
+    allregsW[0x14] = (unsigned short *)&gen_regsXBC1;
+    allregsW[0x18] = (unsigned short *)&gen_regsXDE1;
+    allregsW[0x1c] = (unsigned short *)&gen_regsXHL1;
+    allregsW[0x20] = (unsigned short *)&gen_regsXWA2;
+    allregsW[0x24] = (unsigned short *)&gen_regsXBC2;
+    allregsW[0x28] = (unsigned short *)&gen_regsXDE2;
+    allregsW[0x2c] = (unsigned short *)&gen_regsXHL2;
+    allregsW[0x30] = (unsigned short *)&gen_regsXWA3;
+    allregsW[0x34] = (unsigned short *)&gen_regsXBC3;
+    allregsW[0x38] = (unsigned short *)&gen_regsXDE3;
+    allregsW[0x3c] = (unsigned short *)&gen_regsXHL3;
+    allregsW[0xf0] = (unsigned short *)&gen_regsXIX;
+    allregsW[0xf4] = (unsigned short *)&gen_regsXIY;
+    allregsW[0xf8] = (unsigned short *)&gen_regsXIZ;
+    allregsW[0xfc] = (unsigned short *)&gen_regsXSP;
+
+    for (j=2;j<256;j+=4)
+        allregsW[j] = allregsW[j-2]+1;
+
+    // initialize pointer structure for access to all registers in long mode
+    allregsL[0x00] = allregsL[0x01] = allregsL[0x02] = allregsL[0x03] = &gen_regsXWA0;
+    allregsL[0x04] = allregsL[0x05] = allregsL[0x06] = allregsL[0x07] = &gen_regsXBC0;
+    allregsL[0x08] = allregsL[0x09] = allregsL[0x0a] = allregsL[0x0b] = &gen_regsXDE0;
+    allregsL[0x0c] = allregsL[0x0d] = allregsL[0x0e] = allregsL[0x0f] = &gen_regsXHL0;
+    allregsL[0x10] = allregsL[0x11] = allregsL[0x12] = allregsL[0x13] = &gen_regsXWA1;
+    allregsL[0x14] = allregsL[0x15] = allregsL[0x16] = allregsL[0x17] = &gen_regsXBC1;
+    allregsL[0x18] = allregsL[0x19] = allregsL[0x1a] = allregsL[0x1b] = &gen_regsXDE1;
+    allregsL[0x1c] = allregsL[0x1d] = allregsL[0x1e] = allregsL[0x1f] = &gen_regsXHL1;
+    allregsL[0x20] = allregsL[0x21] = allregsL[0x22] = allregsL[0x23] = &gen_regsXWA2;
+    allregsL[0x24] = allregsL[0x25] = allregsL[0x26] = allregsL[0x27] = &gen_regsXBC2;
+    allregsL[0x28] = allregsL[0x29] = allregsL[0x2a] = allregsL[0x2b] = &gen_regsXDE2;
+    allregsL[0x2c] = allregsL[0x2d] = allregsL[0x2e] = allregsL[0x2f] = &gen_regsXHL2;
+    allregsL[0x30] = allregsL[0x31] = allregsL[0x32] = allregsL[0x33] = &gen_regsXWA3;
+    allregsL[0x34] = allregsL[0x35] = allregsL[0x36] = allregsL[0x37] = &gen_regsXBC3;
+    allregsL[0x38] = allregsL[0x39] = allregsL[0x3a] = allregsL[0x3b] = &gen_regsXDE3;
+    allregsL[0x3c] = allregsL[0x3d] = allregsL[0x3e] = allregsL[0x3f] = &gen_regsXHL3;
+    allregsL[0xf0] = allregsL[0xf1] = allregsL[0xf2] = allregsL[0xf3] = &gen_regsXIX;
+    allregsL[0xf4] = allregsL[0xf5] = allregsL[0xf6] = allregsL[0xf7] = &gen_regsXIY;
+    allregsL[0xf8] = allregsL[0xf9] = allregsL[0xfa] = allregsL[0xfb] = &gen_regsXIZ;
+    allregsL[0xfc] = allregsL[0xfd] = allregsL[0xfe] = allregsL[0xff] = &gen_regsXSP;
+
+    cregsW[4] = allregsW[0xf0];
+    cregsW[5] = allregsW[0xf4];
+    cregsW[6] = allregsW[0xf8];
+    cregsW[7] = allregsW[0xfc];
+
+    cregsL[4] = allregsL[0xf0];
+    cregsL[5] = allregsL[0xf4];
+    cregsL[6] = allregsL[0xf8];
+    cregsL[7] = allregsL[0xfc];
+
+    set_cregs();
+    my_pc = get_address(gen_regsPC);
+
+    debugIndex = 0;
+    debugCount = 1;
+    //saved_my_pc = my_pc;
+}
+
 /*int check_pc(unsigned long addr)
 {
  if (gen_regsPC==addr) return 1;

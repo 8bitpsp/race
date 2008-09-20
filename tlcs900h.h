@@ -55,6 +55,7 @@ extern unsigned char ldcRegs[64];
 #define XNSP	23
 // initialize registers, etc..
 void tlcs_init();
+void tlcs_reinit();
 // perform one cpu step
 int tlcs_step();
 // output the current contents of the registers to a file
