@@ -25,13 +25,6 @@
 #include "tlcs900h.h"
 #include "memory.h"
 
-#ifdef PC
-#undef PC
-#endif
-
-#include "cz80.h"
-#include "state.h"
-
 psp_ctrl_mask_to_index_map_t physical_to_emulated_button_map[] =
 {
   { PSP_CTRL_LTRIGGER | PSP_CTRL_RTRIGGER, 16 },
@@ -167,10 +160,6 @@ void UpdateInputState()
   static SceCtrlData pad;
   if (pspCtrlPollControls(&pad))
   {
-    if (pad.Buttons & PSP_CTRL_SQUARE)
-        state_store("foo.sta");
-    if (pad.Buttons & PSP_CTRL_TRIANGLE)
-        state_restore("foo.sta");
 #ifdef PSP_DEBUG
     if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
       == (PSP_CTRL_SELECT | PSP_CTRL_START))

@@ -1,3 +1,17 @@
+//---------------------------------------------------------------------------
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 2 of the License, or
+//  (at your option) any later version. See also the license.txt file for
+//  additional informations.
+//---------------------------------------------------------------------------
+
+// state.cpp: state saving
+//
+//  09/11/2008 Initial version (Akop Karapetyan)
+//
+//////////////////////////////////////////////////////////////////////
+
 #include "state.h"
 #include "tlcs900h.h"
 #include "memory.h"
@@ -7,59 +21,26 @@
 #undef PC
 #endif
 
-//-----------------------------------------------------------------------------
-// state_restore()
-//-----------------------------------------------------------------------------
-BOOL state_restore(char* filename)
+BOOL state_restore(FILE *stream)
 {
   RACE_STATE rs;
-
-  // Load
-  FILE *stream;
-  if (!(stream = fopen(filename, "r")))
-    return 0;
-
   if (fread(&rs, sizeof(rs), 1, stream) < 1)
-  {
-    fclose(stream);
     return 0;
-  }
 
-  fclose(stream);
+  // Verify ROM version
+  if (rs.state_version != 0x10)
+    return 0;
 
-  mem_init();
-  tlcs_init();
-  Z80_Init();
-  Z80_Reset();
-
-  // if neogeo pocket color rom, act if we are a neogeo pocket color
-  tlcsMemWriteB(0x6F91,tlcsMemReadB(0x00200023));
-  // pretend we're running in English mode
-  tlcsMemWriteB(0x00006F87,0x01);
-  // kludges & fixes
-  switch (tlcsMemReadW(0x00200020))
-  {
-      case 0x0059:  // Sonic
-      case 0x0061:  // Metal SLug 2nd
-          *get_address(0x0020001F) = 0xFF;
-          break;
-  }
-
-  ngpSoundOff();
-
-// TODO 
-  //Build a state description
-//  state.valid_state_id = 0x0050;
-// TODO  memcpy(&state.header, rom_header, sizeof(RomHeader));
-
-//  state.eepromStatusEnable = eepromStatusEnable;
+  // Verify ROM signature
+  if (memcmp(mainrom, rs.rom_signature, sizeof(rs.rom_signature)) != 0)
+    return 0;
 
   //TLCS-900h Registers
   gen_regsPC = rs.pc;
   gen_regsSR = rs.sr;
   F2 = rs.f_dash;
 
-  int i = 0, j;
+  int i = 0;
   gen_regsXWA0 = rs.gpr[i++];
   gen_regsXBC0 = rs.gpr[i++];
   gen_regsXDE0 = rs.gpr[i++];
@@ -88,27 +69,16 @@ BOOL state_restore(char* filename)
   gen_regsSP = rs.gpr[i++];
   gen_regsXSSP = rs.gpr[i++];
   gen_regsXNSP = rs.gpr[i++];
-#if 1
-  extern u8 interruptPendingLevel, pendingInterrupts[7][INT_QUEUE_MAX];
-  interruptPendingLevel = rs.interruptPendingLevel;
-  for (i = 0; i < 7; i++)
-    for (j = 0; j < INT_QUEUE_MAX; j++)
-      pendingInterrupts[i][j] = rs.pendingInterrupts[i][j];
-  extern int state, checkstate, DMAstate;
-  state = rs.state;
-  checkstate = rs.checkstate;
-  DMAstate = rs.DMAstate;
-#endif
+
   //Z80 Registers
-  extern cz80_struc RACE_cz80_struc;
+  extern cz80_struc *RACE_cz80_struc;
   extern s32 Z80_ICount;
-  unsigned char *mame4all_cz80_rom = &mainram[0x3000];
+  int size_of_z80 = 
+    (u32)(&(RACE_cz80_struc->CycleSup)) - (u32)(&(RACE_cz80_struc->BC));
 
-  memcpy(&RACE_cz80_struc, &rs.RACE_cz80_struc, sizeof(cz80_struc));
-
+  memcpy(RACE_cz80_struc, &rs.RACE_cz80_struc, size_of_z80);
   Z80_ICount = rs.Z80_ICount;
-  RACE_cz80_struc.PC = (rs.PC_is_null)
-                       ? 0 : (u8*)((u32)mame4all_cz80_rom + rs.PC_offset);
+  Cz80_Set_PC(RACE_cz80_struc, rs.PC_offset);
 
   //Sound Chips
   extern int sndCycles;
@@ -126,31 +96,43 @@ BOOL state_restore(char* filename)
   memcpy(&ldcRegs, &rs.ldcRegs, sizeof(ldcRegs));
 
   //Memory
-  memcpy(mainram, rs.mainram, sizeof(rs.mainram));
+  memcpy(mainram, rs.ram, sizeof(rs.ram));
+  memcpy(&mainram[0x20000], rs.cpuram, sizeof(rs.cpuram));
 
   tlcs_reinit();
-  extern int ngpRunning;
-  ngpRunning = 1;
 
   return 1;
 }
 
-int state_store(char* filename)
+//-----------------------------------------------------------------------------
+// state_restore()
+//-----------------------------------------------------------------------------
+BOOL state_restore(char* filename)
+{
+  // Load
+  FILE *stream;
+  if (!(stream = fopen(filename, "r")))
+    return 0;
+
+  int status = state_restore(stream);
+  fclose(stream);
+
+  return status;
+}
+
+BOOL state_store(FILE *stream)
 {
   RACE_STATE rs;
 
   //Build a state description
-  rs.valid_state_id = 0x0050;
-// TODO  memcpy(&state.header, rom_header, sizeof(RomHeader));
-
-//  state.eepromStatusEnable = eepromStatusEnable;
+  rs.state_version = 0x10;
 
   //TLCS-900h Registers
   rs.pc = gen_regsPC;
   rs.sr = gen_regsSR;
   rs.f_dash = F2;
 
-  int i = 0, j;
+  int i = 0;
   rs.gpr[i++] = gen_regsXWA0;
   rs.gpr[i++] = gen_regsXBC0;
   rs.gpr[i++] = gen_regsXDE0;
@@ -179,29 +161,15 @@ int state_store(char* filename)
   rs.gpr[i++] = gen_regsSP;
   rs.gpr[i++] = gen_regsXSSP;
   rs.gpr[i++] = gen_regsXNSP;
-#if 1
-  extern u8 interruptPendingLevel, pendingInterrupts[7][INT_QUEUE_MAX];
-  rs.interruptPendingLevel = interruptPendingLevel;
-  for (i = 0; i < 7; i++)
-    for (j = 0; j < INT_QUEUE_MAX; j++)
-      rs.pendingInterrupts[i][j] = pendingInterrupts[i][j];
 
-  extern int state, checkstate, DMAstate;
-  rs.state = state;
-  rs.checkstate = checkstate;
-  rs.DMAstate = DMAstate;
-#endif
   //Z80 Registers
-  extern cz80_struc RACE_cz80_struc;
+  extern cz80_struc *RACE_cz80_struc;
   extern s32 Z80_ICount;
-  unsigned char *mame4all_cz80_rom = &mainram[0x3000];
-
-  memcpy(&rs.RACE_cz80_struc, &RACE_cz80_struc, sizeof(cz80_struc));
+  int size_of_z80 = 
+    (u32)(&(RACE_cz80_struc->CycleSup)) - (u32)(&(RACE_cz80_struc->BC));
+  memcpy(&rs.RACE_cz80_struc, RACE_cz80_struc, size_of_z80);
   rs.Z80_ICount = Z80_ICount;
-
-  rs.PC_is_null = !RACE_cz80_struc.PC;
-  rs.PC_offset = (RACE_cz80_struc.PC) 
-                 ? ((u32)RACE_cz80_struc.PC - (u32)mame4all_cz80_rom) : 0;
+  rs.PC_offset = Cz80_Get_PC(RACE_cz80_struc);
 
   //Sound Chips
   extern int sndCycles;
@@ -219,20 +187,28 @@ int state_store(char* filename)
   memcpy(&rs.ldcRegs, &ldcRegs, sizeof(ldcRegs));
 
   //Memory
-  memcpy(rs.mainram, mainram, sizeof(rs.mainram));
+  memcpy(rs.ram, mainram, sizeof(rs.ram));
+  memcpy(rs.cpuram, &mainram[0x20000], sizeof(rs.cpuram));
 
+  //ROM signature
+  memcpy(rs.rom_signature, mainrom, sizeof(rs.rom_signature));
+
+  // Write to file
+  if (fwrite(&rs, sizeof(rs), 1, stream) < 1)
+    return 0;
+
+  return 1;
+}
+
+BOOL state_store(char* filename)
+{
   // Save
   FILE *stream;
   if (!(stream = fopen(filename, "w")))
     return 0;
 
-  if (fwrite(&rs, sizeof(rs), 1, stream) < 1)
-  {
-    fclose(stream);
-    return 0;
-  }
-
+  int status = state_store(stream);
   fclose(stream);
 
-  return 1;
+  return status;
 }

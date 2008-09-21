@@ -1,3 +1,17 @@
+//---------------------------------------------------------------------------
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 2 of the License, or
+//  (at your option) any later version. See also the license.txt file for
+//  additional informations.
+//---------------------------------------------------------------------------
+
+// state.h: state saving
+//
+//  09/11/2008 Initial version (Akop Karapetyan)
+//
+//////////////////////////////////////////////////////////////////////
+
 #ifndef _STATE_H
 #define _STATE_H
 
@@ -12,34 +26,24 @@
 
 typedef struct
 {
-	//Save State Id
-	u16 valid_state_id; // = 0x0050
+  //Save state version
+  u8 state_version; // = 0x10
+
+  //Rom signature
+  u8 rom_signature[0x40];
 
 	//Memory
-	u8 mainram[0x38000];// 0xC000];
+	u8 ram[0xc000];
+  u8 cpuram[0x08a0];// 0xC000]; 0x38000 
 
 	//TLCS-900h Registers
 	u32 pc, sr;
 	u8 f_dash;
 	u32 gpr[23];
 
-  // these 5 may not be necessary
-#if 1
-  u8 interruptPendingLevel;
-  u8 pendingInterrupts[7][INT_QUEUE_MAX];
-  int state;
-  int checkstate;
-  int DMAstate;
-#endif
-
-#if 0
-	BOOL eepromStatusEnable;
-#endif
-
   //Z80 Registers
   cz80_struc RACE_cz80_struc;
   u32 PC_offset;
-  u8  PC_is_null;
   s32 Z80_ICount;
 
   //Sound Chips
@@ -52,16 +56,13 @@ typedef struct
 
 	//DMA
   u8 ldcRegs[64];
-
-#if 0
-	//Rom Description
-	RomHeader header;
-#endif
 }
 RACE_STATE;
 
 int state_store(char* filename);
 int state_restore(char* filename);
+int state_store(FILE *stream);
+int state_restore(FILE *stream);
 
 //=============================================================================
 #endif // _STATE_H
