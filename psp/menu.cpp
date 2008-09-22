@@ -219,6 +219,7 @@ PL_MENU_OPTIONS_BEGIN(MappableButtons)
   PL_MENU_OPTION("A",      (JST|0x10))
   PL_MENU_OPTION("B",      (JST|0x20))
   PL_MENU_OPTION("Option", (JST|0x40))
+  PL_MENU_OPTION("Test switch", (JST|0x80))
 PL_MENU_OPTIONS_END
 PL_MENU_OPTIONS_BEGIN(ToggleOptions)
   PL_MENU_OPTION("Disabled", 0)
