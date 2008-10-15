@@ -358,6 +358,8 @@ int InitMenu()
   UiMetric.TitleColor = PSP_COLOR_WHITE;
   UiMetric.MenuFps = 30;
   UiMetric.TabBgColor = COLOR(0xcc,0x73,0x73,0xff);
+  UiMetric.BrowserScreenshotPath = GamePath;
+  UiMetric.BrowserScreenshotDelay = 120;
 
   TabIndex = TAB_ABOUT;
 

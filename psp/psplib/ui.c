@@ -628,6 +628,8 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
   pl_menu_item *item;
   SceCtrlData pad;
   char *instructions[BROWSER_TEMPLATE_COUNT];
+  int delay;
+  PspImage *screenshot = NULL;
 
   /* Initialize instruction strings */
   int i;
@@ -674,6 +676,7 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
   /* Begin browsing (outer) loop */
   while (!ExitPSP)
   {
+    delay = UiMetric.BrowserScreenshotDelay;
     sel = last_sel = NULL;
     pos.Top = NULL;
     pl_menu_clear_items(&menu);
@@ -755,6 +758,18 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
         continue;
 
       fast_scroll = 0;
+      if (delay > 0) delay--;
+      if ((delay == 0)
+        && sel
+        && !screenshot
+        && !((unsigned int)sel->param & PL_FILE_DIRECTORY)
+        && UiMetric.BrowserScreenshotPath)
+      {
+        pl_file_path screenshot_path;
+        sprintf(screenshot_path, "%s%s.png",
+          UiMetric.BrowserScreenshotPath, sel->caption);
+        screenshot = pspImageLoadPng(screenshot_path);
+      }
 
       /* Check the directional buttons */
       if (sel)
@@ -944,6 +959,19 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
       if (sel) pspVideoFillRect(sx, sel_top, sx+w, sel_top+fh,
         UiMetric.SelectedBgColor);
 
+      /* Render screenshot */
+      if (screenshot)
+      {
+        int screenshot_width = screenshot->Viewport.Width;
+        int screenshot_height = screenshot->Viewport.Height;
+
+        pspVideoPutImage(screenshot,
+                         UiMetric.Right - screenshot->Viewport.Width,
+                         UiMetric.Top,
+                         screenshot_width,
+                         screenshot_height);
+      }
+
       sceGuCallList(call_list);
 
       pspVideoEnd();
@@ -952,12 +980,26 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
       pspVideoWaitVSync();
       pspVideoSwapBuffers();
 
+      if (last_sel != sel)
+      {
+        if (screenshot != NULL)
+        {
+          pspImageDestroy(screenshot);
+          screenshot = NULL;
+        }
+
+        delay = UiMetric.BrowserScreenshotDelay;
+      }
+
       last_sel = sel;
       last_sel_top = sel_top;
     }
   }
 
 exit_browser:
+
+  if (screenshot != NULL)
+    pspImageDestroy(screenshot);
 
   /* Free instruction strings */
   for (i = 0; i < BROWSER_TEMPLATE_COUNT; i++)

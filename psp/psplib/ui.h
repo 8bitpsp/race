@@ -53,6 +53,8 @@ typedef struct PspUiMetric
 
   u32 BrowserFileColor;
   u32 BrowserDirectoryColor;
+  u32 BrowserScreenshotDelay;
+  const char *BrowserScreenshotPath;
 
   int GalleryIconsPerRow;
   int GalleryIconMarginWidth;
