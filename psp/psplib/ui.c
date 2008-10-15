@@ -944,7 +944,7 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
           /* Render screenshot */
           if (screenshot)
             pspVideoPutImage(screenshot,
-                            UiMetric.Right - screenshot_width,
+                            UiMetric.Right - screenshot_width - UiMetric.ScrollbarWidth,
                             ((UiMetric.Bottom - UiMetric.Top) / 2 - 
                             screenshot_height / 2) + UiMetric.Top,
                             screenshot_width,
@@ -975,7 +975,7 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
       /* Render screenshot */
       if (screenshot)
         pspVideoPutImage(screenshot,
-                         UiMetric.Right - screenshot_width,
+                         UiMetric.Right - screenshot_width - UiMetric.ScrollbarWidth,
                          ((UiMetric.Bottom - UiMetric.Top) / 2 - 
                          screenshot_height / 2) + UiMetric.Top,
                          screenshot_width,
