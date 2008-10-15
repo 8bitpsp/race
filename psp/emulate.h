@@ -12,6 +12,7 @@ void TrashEmulation();
 #define MAP_BUTTONS 20
 
 #define JST 0x100
+#define AFI 0x200
 #define SPC 0x400
 
 #define SPC_MENU 1
@@ -35,6 +36,7 @@ typedef struct psp_options_t
   uint8_t  show_fps;
   uint8_t  frame_skip;
   uint16_t clock_freq;
+  uint8_t  autofire;
 } psp_options_t;
 
 extern psp_options_t psp_options;

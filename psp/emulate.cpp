@@ -147,9 +147,6 @@ void RunEmulation()
 
   /* Pause sound */
   pl_snd_pause(0);
-
-  /* Write flash data for current game */
-  writeSaveGameFile();
 }
 
 void UpdateInputState()
@@ -157,7 +154,9 @@ void UpdateInputState()
   ngpInputState = 0;
 
   /* Parse input */
+  static int autofire_status = 0;
   static SceCtrlData pad;
+
   if (pspCtrlPollControls(&pad))
   {
 #ifdef PSP_DEBUG
@@ -166,7 +165,10 @@ void UpdateInputState()
         pl_util_save_vram_seq(ScreenshotPath, "game");
 #endif
 
+    if (--autofire_status < 0)
+      autofire_status = psp_options.autofire;
     psp_ctrl_mask_to_index_map_t *current_mapping = physical_to_emulated_button_map;
+
     for (; current_mapping->mask; current_mapping++)
     {
       u32 code = current_map.button_map[current_mapping->index];
@@ -176,13 +178,18 @@ void UpdateInputState()
       /* doesn't trigger any other combination presses. */
       if (on) pad.Buttons &= ~current_mapping->mask;
 
-      if (code & JST)
+      if (code & AFI)
+      {
+        if (on && (autofire_status == 0)) 
+          ngpInputState |= CODE_MASK(code);
+        continue;
+      }
+      else if (code & JST)
       {
         if (on) ngpInputState |= CODE_MASK(code);
         continue;
       }
-
-      if (code & SPC)
+      else if (code & SPC)
       {
         switch (CODE_MASK(code))
         {

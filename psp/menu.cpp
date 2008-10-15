@@ -100,6 +100,7 @@ static const char
 #define OPTION_SHOW_FPS     0x04
 #define OPTION_CONTROL_MODE 0x06
 #define OPTION_ANIMATE      0x07
+#define OPTION_AUTOFIRE     0x08
 
 #define SYSTEM_RESET        0x10
 #define SYSTEM_SCRNSHOT     0x11
@@ -124,7 +125,7 @@ static PspImage* psp_load_state_icon(const char *path);
 static int psp_load_state(const char *path);
 static PspImage* psp_save_state(const char *path, PspImage *icon);
 
-static const char *QuickloadFilter[] = { "ZIP", "NGP", '\0' };
+static const char *QuickloadFilter[] = { "ZIP", "NGP", "NGC", "NGPC", '\0' };
 
 static int OnGenericCancel(const void *uiobject, 
                            const void *param);
@@ -218,12 +219,20 @@ PL_MENU_OPTIONS_BEGIN(MappableButtons)
   /* Buttons */
   PL_MENU_OPTION("A",      (JST|0x10))
   PL_MENU_OPTION("B",      (JST|0x20))
-  PL_MENU_OPTION("Option", (JST|0x40))
-  PL_MENU_OPTION("Test switch", (JST|0x80))
+  PL_MENU_OPTION("A (autofire)", (AFI|0x10))
+  PL_MENU_OPTION("B (autofire)", (AFI|0x20))
+  PL_MENU_OPTION("Option",       (JST|0x40))
+  PL_MENU_OPTION("Test switch",  (JST|0x80))
 PL_MENU_OPTIONS_END
 PL_MENU_OPTIONS_BEGIN(ToggleOptions)
   PL_MENU_OPTION("Disabled", 0)
   PL_MENU_OPTION("Enabled", 1)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(AutofireOptions)
+  PL_MENU_OPTION("Once every 3 frames", 2)
+  PL_MENU_OPTION("Once every 10 frames", 9)
+  PL_MENU_OPTION("Once every 30 frames", 29)
+  PL_MENU_OPTION("Once every 60 frames", 59)
 PL_MENU_OPTIONS_END
 PL_MENU_OPTIONS_BEGIN(ScreenSizeOptions)
   PL_MENU_OPTION("Actual size", DISPLAY_MODE_UNSCALED)
@@ -273,6 +282,8 @@ PL_MENU_ITEMS_END
 PL_MENU_ITEMS_BEGIN(OptionMenuDef)
   PL_MENU_HEADER("Video")
   PL_MENU_ITEM("Screen size",OPTION_DISPLAY_MODE,ScreenSizeOptions,"\026\250\020 Change screen size")
+  PL_MENU_HEADER("Input")
+  PL_MENU_ITEM("Rate of autofire", OPTION_AUTOFIRE,AutofireOptions,"\026\250\020 Adjust rate of autofire")
   PL_MENU_HEADER("Performance")
   PL_MENU_ITEM("Frame skipping", OPTION_FRAME_SKIP,FrameskipOptions,"\026\250\020 Select number of frames to skip per update")
   PL_MENU_ITEM("PSP clock frequency",OPTION_CLOCK_FREQ,PspClockFreqOptions,"\026\250\020 Larger values: faster emulation, faster battery depletion (default: 222MHz)")
@@ -302,7 +313,7 @@ int InitMenu()
 
   /* Initialize paths */
   sprintf(SaveStatePath, "%sstates/", pl_psp_get_app_directory());
-  sprintf(ScreenshotPath, "%sscreens/", pl_psp_get_app_directory());
+  sprintf(ScreenshotPath, "ms0:/PSP/PHOTO/%s/", PSP_APP_NAME);
   sprintf(GamePath, "%s", pl_psp_get_app_directory());
 
   /* Load the background image */
@@ -358,8 +369,8 @@ int InitMenu()
   UiMetric.TitleColor = PSP_COLOR_WHITE;
   UiMetric.MenuFps = 30;
   UiMetric.TabBgColor = COLOR(0xcc,0x73,0x73,0xff);
-  UiMetric.BrowserScreenshotPath = GamePath;
-  UiMetric.BrowserScreenshotDelay = 120;
+  UiMetric.BrowserScreenshotPath = ScreenshotPath;
+  UiMetric.BrowserScreenshotDelay = 30;
 
   TabIndex = TAB_ABOUT;
 
@@ -405,6 +416,8 @@ void DisplayMenu()
         pl_menu_select_option_by_value(item, (void*)(int)UiMetric.Animate);
         item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_FRAME_SKIP);
         pl_menu_select_option_by_value(item, (void*)(int)psp_options.frame_skip);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_AUTOFIRE);
+        pl_menu_select_option_by_value(item, (void*)(int)psp_options.autofire);
 
         pspUiOpenMenu(&OptionUiMenu, NULL);
         break;
@@ -532,6 +545,10 @@ static int OnGenericCancel(const void *uiobject,
 static int OnQuickloadOk(const void *browser,
                          const void *path)
 {
+  /* Write flash data for current game */
+  if (GAME_LOADED)
+    writeSaveGameFile();
+
   pspUiFlashMessage("Loading, please wait...");
 
   if (!handleInputFile((char*)path))
@@ -539,6 +556,9 @@ static int OnQuickloadOk(const void *browser,
     pspUiAlert("Error loading cartridge");
     return 0;
   }
+
+  /* Reset selected state */
+  SaveStateGallery.Menu.selected = NULL;
 
   SET_AS_CURRENT_GAME((char*)path);
   pl_file_get_parent_directory((const char*)path,
@@ -721,6 +741,10 @@ static int OnMenuOk(const void *uimenu, const void* sel_item)
     case SYSTEM_RESET:
       if (pspUiConfirm("Reset the system?"))
       {
+        /* Write flash data for current game */
+        if (GAME_LOADED)
+          writeSaveGameFile();
+
         mainemuinit();
         ResumeEmulation = 1;
         return 1;
@@ -797,6 +821,9 @@ static int OnMenuItemChanged(const struct PspUiMenu *uimenu,
       break;
     case OPTION_ANIMATE:
       UiMetric.Animate = (int)option->value;
+      break;
+    case OPTION_AUTOFIRE:
+      psp_options.autofire = (int)option->value;
       break;
     }
   }
@@ -1049,8 +1076,12 @@ static void psp_load_options()
   pl_ini_get_string(&file, "File", "Game Path", NULL, 
                     GamePath, sizeof(GamePath));
 
-  int control_mode = pl_ini_get_int(&file, "Menu", "Control Mode", 0);
   UiMetric.Animate = pl_ini_get_int(&file, "Menu", "Animate", 1);
+  psp_options.autofire = pl_ini_get_int(&file, "Input", "Autofire", 2);
+  if (psp_options.autofire < 2)
+    psp_options.autofire = 2;
+
+  int control_mode = pl_ini_get_int(&file, "Menu", "Control Mode", 0);
   UiMetric.OkButton = (!control_mode)
                       ? PSP_CTRL_CROSS : PSP_CTRL_CIRCLE;
   UiMetric.CancelButton = (!control_mode)
@@ -1081,6 +1112,8 @@ static int psp_save_options()
                  (UiMetric.OkButton == PSP_CTRL_CIRCLE));
   pl_ini_set_int(&file, "Menu", "Animate",
                  UiMetric.Animate);
+  pl_ini_set_int(&file, "Input", "Autofire",
+                 psp_options.autofire);
   pl_ini_set_string(&file, "File", "Game Path",
                     GamePath);
 

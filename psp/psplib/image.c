@@ -30,6 +30,7 @@
 typedef unsigned char byte;
 
 int FindPowerOfTwoLargerThan(int n);
+int FindPowerOfTwoLargerThan2(int n);
 
 /* Creates an image in memory */
 PspImage* pspImageCreate(int width, int height, int bpp)
@@ -404,7 +405,7 @@ PspImage* pspImageLoadPngFd(FILE *fp)
 
   PspImage *image;
 
-  int mod_width = FindPowerOfTwoLargerThan(width);
+  int mod_width = FindPowerOfTwoLargerThan2(width);
   if (!(image = pspImageCreate(mod_width, height, PSP_IMAGE_16BPP)))
   {
     png_destroy_read_struct(&pPngStruct, &pPngInfo, NULL);
@@ -578,3 +579,9 @@ int FindPowerOfTwoLargerThan(int n)
   return i;
 }
 
+int FindPowerOfTwoLargerThan2(int n)
+{
+  int i;
+  for (i = 1; i < n; i *= 2);
+  return i;
+}

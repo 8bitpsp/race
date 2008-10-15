@@ -40,6 +40,11 @@ int pl_util_save_image_seq(const char *path,
                            const char *filename,
                            const PspImage *image)
 {
+  /* If screenshot path does not exist, create it */
+  if (!pl_file_exists(path))
+    if (!pl_file_mkdir_recursive(path))
+      return 0;
+
   /* Loop until first free screenshot slot is found */
   int i = 0;
   pl_file_path full_path;

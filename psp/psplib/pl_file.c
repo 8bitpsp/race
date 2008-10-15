@@ -38,6 +38,8 @@ static void
 static int
   compare_files_by_name(const void *s1, 
                         const void *s2);
+static int 
+  mkdir_recursive(const char *path);
 
 void pl_file_get_parent_directory(const char *path,
                                   char *parent,
@@ -103,7 +105,8 @@ int pl_file_is_root_directory(const char *path)
 
 int pl_file_exists(const char *path)
 {
-  return (pl_file_get_file_size(path) >= 0);
+  SceIoStat stat;
+  return sceIoGetstat(path, &stat) == 0;
 }
 
 int pl_file_is_of_type(const char *path,
@@ -136,6 +139,42 @@ void pl_file_destroy_file_list(pl_file_list *list)
     free(file->name);
     free(file);
   }
+}
+
+static int mkdir_recursive(const char *path)
+{
+  int exit_status = 1;
+  SceIoStat stat;
+
+  if (sceIoGetstat(path, &stat) == 0)
+    /* If not a directory, cannot continue; otherwise success */
+    return (stat.st_attr & FIO_SO_IFDIR);
+
+  /* First, try creating its parent directory */
+  char *slash_pos = strrchr(path, '/');
+  if (!slash_pos); /* Top level */
+  else if (slash_pos != path && slash_pos[-1] == ':'); /* Top level */
+  else
+  {
+    char *parent = strdup(path);
+    parent[slash_pos - path] = '\0';
+    exit_status = mkdir_recursive(parent);
+
+    free(parent);
+  }
+
+  if (exit_status && slash_pos[1] != '\0')
+  {
+    if (sceIoMkdir(path, 0777) != 0)
+      exit_status = 0;
+  }
+
+  return exit_status;
+}
+
+int pl_file_mkdir_recursive(const char *path)
+{
+  return mkdir_recursive(path);
 }
 
 int pl_file_get_file_list_count(const pl_file_list *list)
