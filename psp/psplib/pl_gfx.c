@@ -1,7 +1,7 @@
 /* psplib/pl_gfx.c
    Graphics rendering routines
 
-   Copyright (C) 2007-2008 Akop Karapetyan
+   Copyright (C) 2007-2009 Akop Karapetyan
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-   Author contact information: pspdev@akop.org
+   Author contact information: dev@psp.akop.org
 */
 
 #include <pspdisplay.h>

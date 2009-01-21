@@ -24,12 +24,14 @@
 #include "pl_util.h"
 #include "pl_file.h"
 #include "pl_ini.h"
+#include "pl_rewind.h"
 #include "ui.h"
 #include "state.h"
 
 #undef u32
 
 extern PspImage *Screen;
+extern pl_rewind Rewinder;
 
 pl_file_path CurrentGame = "",
              GamePath,
@@ -211,6 +213,7 @@ PL_MENU_OPTIONS_BEGIN(MappableButtons)
   PL_MENU_OPTION("None", 0)
   /* Special */
   PL_MENU_OPTION("Special: Open Menu", (SPC|SPC_MENU))
+  PL_MENU_OPTION("Special: Rewind", (SPC|SPC_REWIND))
   /* Directions */
   PL_MENU_OPTION("Up",    (JST|0x01))
   PL_MENU_OPTION("Down",  (JST|0x02))
@@ -567,6 +570,7 @@ static int OnQuickloadOk(const void *browser,
   ResumeEmulation = 1;
 
   system_sound_chipreset(); /* Reset sound */
+  pl_rewind_reset(&Rewinder);
 
   return 1;
 }
@@ -588,6 +592,7 @@ static int OnSaveStateOk(const void *gallery, const void *item)
       pl_menu_find_item_by_id(&((PspUiGallery*)gallery)->Menu,
         ((pl_menu_item*)item)->id);
       free(path);
+      pl_rewind_reset(&Rewinder);
 
       return 1;
     }
@@ -691,9 +696,9 @@ static void OnSplashRender(const void *splash,
     PSP_APP_NAME" version "PSP_APP_VER" ("__DATE__")",
     "\026http://psp.akop.org/race",
     " ",
-    "2008 Akop Karapetyan (port)",
-    "2008 Flavor (original PSP port, optimization)",
-    "2006 Judge_ (emulation)",
+    "2008-2009 Akop Karapetyan",
+    "2008 Flavor",
+    "2006 Judge_",
     NULL
   };
 
@@ -746,6 +751,8 @@ static int OnMenuOk(const void *uimenu, const void* sel_item)
           writeSaveGameFile();
 
         mainemuinit();
+        pl_rewind_reset(&Rewinder);
+
         ResumeEmulation = 1;
         return 1;
       }
@@ -1073,6 +1080,7 @@ static void psp_load_options()
   psp_options.frame_skip = pl_ini_get_int(&file, "Video", "Frame Skipping", 0);
   psp_options.clock_freq = pl_ini_get_int(&file, "Video", "PSP Clock Frequency", 333);
   psp_options.show_fps = pl_ini_get_int(&file, "Video", "Show FPS", 0);
+  psp_options.rewind_save_rate = pl_ini_get_int(&file, "Enhancements", "Rewind Save Rate", 5);
   pl_ini_get_string(&file, "File", "Game Path", NULL, 
                     GamePath, sizeof(GamePath));
 
@@ -1114,6 +1122,8 @@ static int psp_save_options()
                  UiMetric.Animate);
   pl_ini_set_int(&file, "Input", "Autofire",
                  psp_options.autofire);
+  pl_ini_set_int(&file, "Enhancements", "Rewind Save Rate", 
+                 psp_options.rewind_save_rate);
   pl_ini_set_string(&file, "File", "Game Path",
                     GamePath);
 

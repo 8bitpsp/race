@@ -1,5 +1,5 @@
 ## Makefile for psplib library
-## Copyright (C) 2008 Akop Karapetyan
+## Copyright (C) 2008-2009 Akop Karapetyan
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-## Author contact information: pspdev@akop.org
+## Author contact information: dev@psp.akop.org
 
 ifndef PSP_FW_VERSION
 PSP_FW_VERSION=200
@@ -33,7 +33,8 @@ all: libpsplib.a
 libpsplib.a: \
   adhoc.o font.o image.o ctrl.o video.o ui.o \
   pl_ini.o pl_perf.o pl_vk.o pl_util.o pl_image.o \
-  pl_psp.o pl_menu.o pl_file.o pl_snd.o pl_gfx.o
+  pl_psp.o pl_menu.o pl_file.o pl_snd.o pl_gfx.o \
+  pl_rewind.o
 
 	$(AR) cru $@ $?
 	$(RANLIB) $@
@@ -89,6 +90,9 @@ pl_image.o: pl_image.c pl_image.h
 	$(CC) $(DEFINES) $(CFLAGS) -O2 -c -o $@ $<
 
 pl_gfx.o: pl_gfx.c pl_gfx.h
+	$(CC) $(DEFINES) $(CFLAGS) -O2 -c -o $@ $<
+
+pl_rewind.o: pl_rewind.c pl_rewind.h
 	$(CC) $(DEFINES) $(CFLAGS) -O2 -c -o $@ $<
 
 stockfont.h: stockfont.fd genfont

@@ -943,12 +943,13 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
 
           /* Render screenshot */
           if (screenshot)
-            pspVideoPutImage(screenshot,
+            pspVideoPutImageAlpha(screenshot,
                             UiMetric.Right - screenshot_width - UiMetric.ScrollbarWidth,
                             ((UiMetric.Bottom - UiMetric.Top) / 2 - 
                             screenshot_height / 2) + UiMetric.Top,
                             screenshot_width,
-                            screenshot_height);
+                            screenshot_height,
+                            0xaa);
 
           /* Selection box */
           int box_top = last_sel_top-((last_sel_top-sel_top)/n)*f;
@@ -974,12 +975,13 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
 
       /* Render screenshot */
       if (screenshot)
-        pspVideoPutImage(screenshot,
+        pspVideoPutImageAlpha(screenshot,
                          UiMetric.Right - screenshot_width - UiMetric.ScrollbarWidth,
                          ((UiMetric.Bottom - UiMetric.Top) / 2 - 
                          screenshot_height / 2) + UiMetric.Top,
                          screenshot_width,
-                         screenshot_height);
+                         screenshot_height,
+                         0xaa);
 
       /* Render selection box */
       if (sel) pspVideoFillRect(sx, sel_top, sx+w, sel_top+fh,

@@ -17,8 +17,10 @@
 #include "pl_file.h"
 #include "ctrl.h"
 #include "pl_util.h"
+#include "pl_rewind.h"
 
 #include "StdAfx.h"
+#include "state.h"
 #include "neopopsound.h"
 #include "input.h"
 #include "flash.h"
@@ -43,6 +45,8 @@ psp_ctrl_mask_to_index_map_t physical_to_emulated_button_map[] =
 };
 
 PspImage *Screen;
+pl_rewind Rewinder;
+
 extern int m_bIsActive;
 extern psp_ctrl_map_t current_map;
 extern pl_file_path ScreenshotPath;
@@ -50,6 +54,8 @@ extern pl_file_path ScreenshotPath;
 static pl_perf_counter FpsCounter;
 static int ScreenX, ScreenY, ScreenW, ScreenH;
 static int ClearScreen;
+static int Rewinding;
+static int frames_until_save;
 
 static void AudioCallback(pl_snd_sample* buf,
                           unsigned int samples,
@@ -65,6 +71,12 @@ int InitEmulation()
   Screen->Viewport.Height = 152;
 
   sound_system_init();
+
+  /* Initialize rewinder */
+  pl_rewind_init(&Rewinder,
+    state_store_mem,
+    state_restore_mem,
+    state_get_size);
 
   pl_snd_set_callback(0, AudioCallback, NULL);
 
@@ -137,6 +149,8 @@ void RunEmulation()
   /* Initialize performance counter */
   pl_perf_init_counter(&FpsCounter);
   ClearScreen = 1;
+  Rewinding = 0;
+  frames_until_save = 0;
 
   /* Resume sound */
   pl_snd_resume(0);
@@ -159,12 +173,6 @@ void UpdateInputState()
 
   if (pspCtrlPollControls(&pad))
   {
-#ifdef PSP_DEBUG
-    if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
-      == (PSP_CTRL_SELECT | PSP_CTRL_START))
-        pl_util_save_vram_seq(ScreenshotPath, "game");
-#endif
-
     if (--autofire_status < 0)
       autofire_status = psp_options.autofire;
     psp_ctrl_mask_to_index_map_t *current_mapping = physical_to_emulated_button_map;
@@ -178,27 +186,49 @@ void UpdateInputState()
       /* doesn't trigger any other combination presses. */
       if (on) pad.Buttons &= ~current_mapping->mask;
 
-      if (code & AFI)
+      if (!Rewinding)
       {
-        if (on && (autofire_status == 0)) 
-          ngpInputState |= CODE_MASK(code);
-        continue;
+        if (code & AFI)
+        {
+          if (on && (autofire_status == 0)) 
+            ngpInputState |= CODE_MASK(code);
+          continue;
+        }
+        else if (code & JST)
+        {
+          if (on) ngpInputState |= CODE_MASK(code);
+          continue;
+        }
       }
-      else if (code & JST)
-      {
-        if (on) ngpInputState |= CODE_MASK(code);
-        continue;
-      }
-      else if (code & SPC)
+
+      if (code & SPC)
       {
         switch (CODE_MASK(code))
         {
         case SPC_MENU:
           if (on) m_bIsActive = 0;
           break;
+        case SPC_REWIND:
+          Rewinding = on;
+          break;
         }
       }
     }
+  }
+
+  /* Rewind/save state */
+  if (!Rewinding)
+  {
+    if (--frames_until_save <= 0)
+    {
+      frames_until_save = psp_options.rewind_save_rate;
+      pl_rewind_save(&Rewinder);
+    }
+  }
+  else
+  {
+    frames_until_save = psp_options.rewind_save_rate;
+    pl_rewind_restore(&Rewinder);
   }
 }
 
@@ -206,15 +236,24 @@ static void AudioCallback(pl_snd_sample* buf,
                           unsigned int samples,
                           void *userdata)
 {
-  int length_bytes = samples << 1; /* 2 bytes per sample */
-  sound_update((_u16*)buf, length_bytes); //Get sound data
-  dac_update((_u16*)buf, length_bytes);
+  if (!Rewinding)
+  {
+    int length_bytes = samples << 1; /* 2 bytes per sample */
+    sound_update((_u16*)buf, length_bytes); //Get sound data
+    dac_update((_u16*)buf, length_bytes);
+  }
+  else /* Render silence */
+    for (unsigned int i = 0; i < samples; i++) 
+      buf[i].stereo.l = buf[i].stereo.r = 0;
 }
 
 /* Release emulation resources */
 void TrashEmulation()
 {
+  pl_rewind_destroy(&Rewinder);
+
   flashShutdown();
 
   pspImageDestroy(Screen);
 }
+

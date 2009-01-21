@@ -288,6 +288,94 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
   sceGuScissor(0, 0, SCR_WIDTH, SCR_HEIGHT);
 }
 
+void pspVideoPutImageAlpha(const PspImage *image, int dx, int dy, int dw, int dh,
+                           unsigned char alpha)
+{
+  sceGuScissor(dx, dy, dx + dw, dy + dh);
+
+  void *pixels;
+  int width;
+
+  if (image->PowerOfTwo)
+  {
+    pixels = image->Pixels;
+    width = image->Width;
+  }
+  else
+  {
+    pixels = GetBuffer(image);
+    width = BUF_WIDTH;
+  }
+
+  sceKernelDcacheWritebackAll();
+/*
+  if (image->Depth != PSP_IMAGE_INDEXED &&
+    dw == image->Viewport.Width && dh == image->Viewport.Height)
+  {
+    sceGuCopyImage(PixelFormat,
+      image->Viewport.X, image->Viewport.Y,
+      image->Viewport.Width, image->Viewport.Height,
+      width, pixels, dx, dy,
+      BUF_WIDTH, (void *)(VRAM_START + (u32)VramOffset));
+  }
+  else
+*/
+  {
+    unsigned int alpha_color = 0xff 
+      | ((unsigned int)alpha << 8)
+      | ((unsigned int)alpha << 16)
+      | ((unsigned int)alpha << 24);
+    sceGuEnable(GU_TEXTURE_2D);
+    sceGuBlendFunc(GU_ADD, GU_FIX, GU_FIX, alpha_color, alpha_color);
+
+    if (image->Depth == PSP_IMAGE_INDEXED)
+    {
+      sceGuClutMode(PixelFormat, 0, 0xff, 0);
+      sceGuClutLoad(image->PalSize >> 3, image->Palette);
+    }
+
+    sceGuTexMode(image->TextureFormat, 0, 0, GU_FALSE);
+    sceGuTexImage(0, width, width, width, pixels);
+    sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
+    sceGuTexFilter(GU_LINEAR, GU_LINEAR);
+ 
+    struct TexVertex* vertices;
+    int start, end, sc_end, slsz_scaled;
+    slsz_scaled = ceil((float)dw * (float)SLICE_SIZE) / (float)image->Viewport.Width;
+
+    start = image->Viewport.X;
+    end = image->Viewport.X + image->Viewport.Width;
+    sc_end = dx + dw;
+
+    /* TODO: Convert to floating-point coords */
+    for (; start < end; start += SLICE_SIZE, dx += slsz_scaled)
+    {
+      vertices = (struct TexVertex*)sceGuGetMemory(2 * sizeof(struct TexVertex));
+
+      vertices[0].u = start;
+      vertices[0].v = image->Viewport.Y;
+      vertices[1].u = start + SLICE_SIZE;
+      vertices[1].v = image->Viewport.Height + image->Viewport.Y;
+
+      vertices[0].x = dx; vertices[0].y = dy;
+      vertices[1].x = dx + slsz_scaled; vertices[1].y = dy + dh;
+
+      vertices[0].color
+        = vertices[1].color
+        = vertices[0].z 
+        = vertices[1].z = 0;
+
+      sceGuDrawArray(GU_SPRITES,
+        GU_TEXTURE_16BIT|TexColor|GU_VERTEX_16BIT|GU_TRANSFORM_2D,2,0,vertices);
+    }
+
+    sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_ONE_MINUS_SRC_ALPHA, 0, 0);
+    sceGuDisable(GU_TEXTURE_2D);
+  }
+
+  sceGuScissor(0, 0, SCR_WIDTH, SCR_HEIGHT);
+}
+
 void pspVideoSwapBuffers()
 {
   VramOffset = sceGuSwapBuffers();

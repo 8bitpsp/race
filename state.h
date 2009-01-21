@@ -8,6 +8,7 @@
 
 // state.h: state saving
 //
+//  01/20/2009 Cleaned up interface, added loading from memory
 //  09/11/2008 Initial version (Akop Karapetyan)
 //
 //////////////////////////////////////////////////////////////////////
@@ -15,49 +16,11 @@
 #ifndef _STATE_H
 #define _STATE_H
 
-#include "cz80.h"
-#include "neopopsound.h"
+#include <stdio.h>
 
-//-----------------------------------------------------------------------------
-// State Definitions:
-//-----------------------------------------------------------------------------
-
-#define INT_QUEUE_MAX 4
-
-typedef struct
-{
-  //Save state version
-  u8 state_version; // = 0x10
-
-  //Rom signature
-  u8 rom_signature[0x40];
-
-	//Memory
-	u8 ram[0xc000];
-  u8 cpuram[0x08a0];// 0xC000]; 0x38000 
-
-	//TLCS-900h Registers
-	u32 pc, sr;
-	u8 f_dash;
-	u32 gpr[23];
-
-  //Z80 Registers
-  cz80_struc RACE_cz80_struc;
-  u32 PC_offset;
-  s32 Z80_ICount;
-
-  //Sound Chips
-  int sndCycles;
-  SoundChip toneChip;
-  SoundChip noiseChip;
-
-	//Timers
-  int timer0, timer1, timer2, timer3;
-
-	//DMA
-  u8 ldcRegs[64];
-}
-RACE_STATE;
+int state_get_size();
+int state_store_mem(void *state);
+int state_restore_mem(void *state);
 
 int state_store(char* filename);
 int state_restore(char* filename);

@@ -95,6 +95,8 @@ int pspVideoPrintNRaw(const PspFont *font, int sx, int sy, const char *string, i
 int pspVideoPrintRaw(const PspFont *font, int sx, int sy, const char *string, u32 color);
 
 void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh);
+void pspVideoPutImageAlpha(const PspImage *image, int dx, int dy, int dw, int dh,
+                           unsigned char alpha);
 
 void pspVideoGlowRect(int sx, int sy, int dx, int dy, u32 color, int radius);
 void pspVideoShadowRect(int sx, int sy, int dx, int dy, u32 color, int depth);

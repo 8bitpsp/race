@@ -15,7 +15,8 @@ void TrashEmulation();
 #define AFI 0x200
 #define SPC 0x400
 
-#define SPC_MENU 1
+#define SPC_MENU   1
+#define SPC_REWIND 2
 
 #define CODE_MASK(x) (x & 0xff)
 
@@ -37,6 +38,7 @@ typedef struct psp_options_t
   uint8_t  frame_skip;
   uint16_t clock_freq;
   uint8_t  autofire;
+  int      rewind_save_rate;
 } psp_options_t;
 
 extern psp_options_t psp_options;
