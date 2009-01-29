@@ -215,7 +215,10 @@ void UpdateInputState()
       }
     }
   }
+}
 
+void HandleStateSaving()
+{
   /* Rewind/save state */
   if (!Rewinding)
   {

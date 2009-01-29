@@ -60,6 +60,10 @@ static char THIS_FILE[]=__FILE__;
 #define new DEBUG_NEW
 #endif
 
+#ifdef PSP
+void HandleStateSaving();
+#endif
+
 // ngpcdis.cpp
 //
 // Emulator for tlcs-900H based on:
@@ -9298,7 +9302,9 @@ void ngpc_run()
 
         tlcs_execute((6*1024*1024) / HOST_FPS);
 #endif
-
+#ifdef PSP
+        HandleStateSaving();
+#endif
     }
 
 #ifdef TCLS900H_PROFILING
