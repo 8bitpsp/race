@@ -8,15 +8,14 @@
 
 // state.h: state saving
 //
-//  01/20/2009 Cleaned up interface, added loading from memory
+//  01/20/2009 Cleaned up interface, added loading from memory (A.K.)
+//             Moved struct definitions to .cpp
 //  09/11/2008 Initial version (Akop Karapetyan)
 //
 //////////////////////////////////////////////////////////////////////
 
 #ifndef _STATE_H
 #define _STATE_H
-
-#include <stdio.h>
 
 int state_get_size();
 int state_store_mem(void *state);

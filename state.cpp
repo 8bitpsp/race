@@ -9,7 +9,7 @@
 // state.cpp: state saving
 //
 //  01/20/2009 Cleaned up interface, added loading from memory
-//             Moved signature-related stuff out of RACE_STATE
+//             Moved signature-related stuff out of RACE_STATE (A.K.)
 //  09/11/2008 Initial version (Akop Karapetyan)
 //
 //////////////////////////////////////////////////////////////////////
@@ -18,6 +18,7 @@
 #include "neopopsound.h"
 
 #include <string.h>
+#include <stdio.h>
 #include "state.h"
 #include "tlcs900h.h"
 #include "memory.h"
@@ -26,70 +27,70 @@
 #undef PC
 #endif
 
-typedef struct 
+/* sizeof() tends to report a larger size, IIRC */
+/* #define RACE_STATE_HEADER_SIZE    sizeof(struct RACE_STATE_HEADER) */
+#define RACE_STATE_HEADER_SIZE    0x41
+struct RACE_STATE_HEADER
 {
-  //Save state version
-  u8 state_version; // = 0x10
+  u8 state_version;       /* State version, currently = 0x10 */
+  u8 rom_signature[0x40]; /* Rom signature, for verification */
+};
 
-  //Rom signature
-  u8 rom_signature[0x40];
-} RACE_STATE_HEADER;
-
-typedef struct
+struct RACE_STATE
 {
-	//Memory
+	/* Memory */
 	u8 ram[0xc000];
-  u8 cpuram[0x08a0];// 0xC000]; 0x38000 
+  u8 cpuram[0x08a0];
 
-	//TLCS-900h Registers
+	/* TLCS-900h Registers */
 	u32 pc, sr;
 	u8 f_dash;
 	u32 gpr[23];
 
-  //Z80 Registers
+  /* Z80 Registers */
   cz80_struc RACE_cz80_struc;
   u32 PC_offset;
   s32 Z80_ICount;
 
-  //Sound Chips
+  /* Sound */
   int sndCycles;
   SoundChip toneChip;
   SoundChip noiseChip;
 
-	//Timers
+	/* Timers */
   int timer0, timer1, timer2, timer3;
 
-	//DMA
+	/* DMA */
   u8 ldcRegs[64];
-}
-RACE_STATE;
+};
 
-static inline int state_store(RACE_STATE *rs);
-static inline int state_restore(RACE_STATE *rs);
+static int state_store(struct RACE_STATE *rs);
+static int state_restore(struct RACE_STATE *rs);
 
 int state_store_mem(void *state)
 {
-  return state_store((RACE_STATE*)state);
+  return state_store((struct RACE_STATE*)state);
 }
 
 int state_restore_mem(void *state)
 {
-  return state_restore((RACE_STATE*)state);
+  return state_restore((struct RACE_STATE*)state);
 }
 
 int state_get_size()
 {
-  return sizeof(RACE_STATE);
+  return sizeof(struct RACE_STATE);
 }
 
-static inline int state_store(RACE_STATE *rs)
+static int state_store(struct RACE_STATE *rs)
 {
-  //TLCS-900h Registers
+  int i = 0;
+
+  /* TLCS-900h Registers */
   rs->pc = gen_regsPC;
   rs->sr = gen_regsSR;
   rs->f_dash = F2;
 
-  int i = 0;
   rs->gpr[i++] = gen_regsXWA0;
   rs->gpr[i++] = gen_regsXBC0;
   rs->gpr[i++] = gen_regsXDE0;
@@ -119,7 +120,7 @@ static inline int state_store(RACE_STATE *rs)
   rs->gpr[i++] = gen_regsXSSP;
   rs->gpr[i++] = gen_regsXNSP;
 
-  //Z80 Registers
+  /* Z80 Registers */
   extern cz80_struc *RACE_cz80_struc;
   extern s32 Z80_ICount;
   int size_of_z80 = 
@@ -128,36 +129,37 @@ static inline int state_store(RACE_STATE *rs)
   rs->Z80_ICount = Z80_ICount;
   rs->PC_offset = Cz80_Get_PC(RACE_cz80_struc);
 
-  //Sound Chips
+  /* Sound */
   extern int sndCycles;
   rs->sndCycles = sndCycles;
   memcpy(&rs->toneChip, &toneChip, sizeof(SoundChip));
   memcpy(&rs->noiseChip, &noiseChip, sizeof(SoundChip));
 
-  //Timers
+  /* Timers */
   rs->timer0 = timer0;
   rs->timer1 = timer1;
   rs->timer2 = timer2;
   rs->timer3 = timer3;
 
-  //DMA
+  /* DMA */
   memcpy(&rs->ldcRegs, &ldcRegs, sizeof(ldcRegs));
 
-  //Memory
+  /* Memory */
   memcpy(rs->ram, mainram, sizeof(rs->ram));
   memcpy(rs->cpuram, &mainram[0x20000], sizeof(rs->cpuram));
 
   return 1;
 }
 
-static inline int state_restore(RACE_STATE *rs)
+static int state_restore(struct RACE_STATE *rs)
 {
-  //TLCS-900h Registers
+  int i = 0;
+
+  /* TLCS-900h Registers */
   gen_regsPC = rs->pc;
   gen_regsSR = rs->sr;
   F2 = rs->f_dash;
 
-  int i = 0;
   gen_regsXWA0 = rs->gpr[i++];
   gen_regsXBC0 = rs->gpr[i++];
   gen_regsXDE0 = rs->gpr[i++];
@@ -187,7 +189,7 @@ static inline int state_restore(RACE_STATE *rs)
   gen_regsXSSP = rs->gpr[i++];
   gen_regsXNSP = rs->gpr[i++];
 
-  //Z80 Registers
+  /* Z80 Registers */
   extern cz80_struc *RACE_cz80_struc;
   extern s32 Z80_ICount;
   int size_of_z80 = 
@@ -197,25 +199,26 @@ static inline int state_restore(RACE_STATE *rs)
   Z80_ICount = rs->Z80_ICount;
   Cz80_Set_PC(RACE_cz80_struc, rs->PC_offset);
 
-  //Sound Chips
+  /* Sound */
   extern int sndCycles;
   sndCycles = rs->sndCycles;
   memcpy(&toneChip, &rs->toneChip, sizeof(SoundChip));
   memcpy(&noiseChip, &rs->noiseChip, sizeof(SoundChip));
 
-  //Timers
+  /* Timers */
   timer0 = rs->timer0;
   timer1 = rs->timer1;
   timer2 = rs->timer2;
   timer3 = rs->timer3;
 
-  //DMA
+  /* DMA */
   memcpy(&ldcRegs, &rs->ldcRegs, sizeof(ldcRegs));
 
-  //Memory
+  /* Memory */
   memcpy(mainram, rs->ram, sizeof(rs->ram));
   memcpy(&mainram[0x20000], rs->cpuram, sizeof(rs->cpuram));
 
+  /* Reinitialize TLCS (mainly redirect pointers) */
   tlcs_reinit();
 
   return 1;
@@ -223,31 +226,60 @@ static inline int state_restore(RACE_STATE *rs)
 
 int state_restore(FILE *stream)
 {
-  RACE_STATE rs;
-  RACE_STATE_HEADER rsh;
-
-  if (fread(&rsh, sizeof(rsh), 1, stream) < 1)
-    return 0;
-  if (fread(&rs, sizeof(rs), 1, stream) < 1)
+  /* Read header */
+  struct RACE_STATE_HEADER rsh;
+  if (fread(&rsh, RACE_STATE_HEADER_SIZE, 1, stream) < 1)
     return 0;
 
-  // Verify ROM version
+  /* Verify state version & signature */
   if (rsh.state_version != 0x10)
     return 0;
-
-  // Verify ROM signature
   if (memcmp(mainrom, rsh.rom_signature, sizeof(rsh.rom_signature)) != 0)
     return 0;
 
+  /* Read state data */
+  struct RACE_STATE rs;
+  if (fread(&rs, sizeof(rs), 1, stream) < 1)
+    return 0;
+
+  /* Restore state */
   return state_restore(&rs);
 }
 
-//-----------------------------------------------------------------------------
-// state_restore()
-//-----------------------------------------------------------------------------
+int state_store(FILE *stream)
+{
+  /* Set version & ROM signature information */
+  struct RACE_STATE_HEADER rsh;
+  rsh.state_version = 0x10;
+  memcpy(rsh.rom_signature, mainrom, sizeof(rsh.rom_signature));
+
+  /* Initialize state data */
+  struct RACE_STATE rs;
+  if (!state_store(&rs))
+    return 0;
+
+  /* Write to file */
+  if (fwrite(&rsh, RACE_STATE_HEADER_SIZE, 1, stream) < 1)
+    return 0;
+  if (fwrite(&rs, sizeof(rs), 1, stream) < 1)
+    return 0;
+
+  return 1;
+}
+
+int state_store(char* filename)
+{
+  FILE *stream;
+  if (!(stream = fopen(filename, "w")))
+    return 0;
+
+  int status = state_store(stream);
+  fclose(stream);
+
+  return status;
+}
 int state_restore(char* filename)
 {
-  // Load
   FILE *stream;
   if (!(stream = fopen(filename, "r")))
     return 0;
@@ -258,38 +290,3 @@ int state_restore(char* filename)
   return status;
 }
 
-int state_store(FILE *stream)
-{
-  RACE_STATE rs;
-  RACE_STATE_HEADER rsh;
-
-  //Build a state description
-  rsh.state_version = 0x10;
-
-  //ROM signature
-  memcpy(rsh.rom_signature, mainrom, sizeof(rsh.rom_signature));
-
-  if (!state_store(&rs))
-    return 0;
-
-  // Write to file
-  if (fwrite(&rsh, sizeof(rsh), 1, stream) < 1)
-    return 0;
-  if (fwrite(&rs, sizeof(rs), 1, stream) < 1)
-    return 0;
-
-  return 1;
-}
-
-int state_store(char* filename)
-{
-  // Save
-  FILE *stream;
-  if (!(stream = fopen(filename, "w")))
-    return 0;
-
-  int status = state_store(stream);
-  fclose(stream);
-
-  return status;
-}
