@@ -39,6 +39,7 @@ typedef struct psp_options_t
   uint16_t clock_freq;
   uint8_t  autofire;
   int      rewind_save_rate;
+  uint8_t  update_freq;
 } psp_options_t;
 
 extern psp_options_t psp_options;

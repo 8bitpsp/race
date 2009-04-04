@@ -8548,7 +8548,7 @@ void tlcs_init()
 
 void tlcs_reinit()
 {
-    int i,j;
+    int j;
 
     // initialize pointer structure for access to all registers in byte mode
     allregsB[0x00] = (unsigned char *)&gen_regsXWA0;
@@ -9245,26 +9245,21 @@ inline void tlcs_execute(int cycles)
 //Flavor, this auto-frameskip code is messed up
 void ngpc_run()
 {
-#ifdef TARGET_PSP
-    u64 currTick=0, lastTick=0;
-    u32 ticks_per_sec = sceRtcGetTickResolution();
-#else
+#ifndef TARGET_PSP
     int currTick=0,lastTick=0;
     u32 ticks_per_sec = 1000;
-#endif
+#endif /* !TARGET_PSP */
 
 #ifdef AUTO_FRAMESKIP
-
     unsigned int skipFrames=0;
-#endif
+#endif /* AUTO_FRAMESKIP */
+
     while(m_bIsActive)  //should be some way to exit
     {
+#ifndef TARGET_PSP
 #ifndef __GP32__
-#ifdef TARGET_PSP
-        sceRtcGetCurrentTick(&currTick);
-#else
         currTick = SDL_GetTicks();
-#endif
+
         //if ((currTick - lastTick) >= (1000/m_emuInfo.fps))
         if((currTick - lastTick) < (ticks_per_sec/HOST_FPS))
         {
@@ -9273,17 +9268,13 @@ void ngpc_run()
             {
                 skipFrames--;
             }
-#endif
+#endif /* AUTO_FRAMESKIP */ 
 #ifdef FRAME_RATE_LIMIT
             while((currTick - lastTick) < (ticks_per_sec/HOST_FPS))
             {
-#ifdef TARGET_PSP
-                sceRtcGetCurrentTick(&currTick);
-#else
                 currTick = SDL_GetTicks();
-#endif
             }
-#endif
+#endif /* FRAME_RATE_LIMIT */
         }
 #ifdef AUTO_FRAMESKIP
         else
@@ -9291,20 +9282,20 @@ void ngpc_run()
             if(skipFrames<MAX_SKIPFRAMES) //cap skipFrames
                 skipFrames++;
         }
-#endif
+#endif /* AUTO_FRAMESKIP */
         lastTick = currTick;
-#endif
+#endif /* !__GP32 */
+#endif /* !TARGET_PSP */
 
 #ifdef AUTO_FRAMESKIP
-
         tlcs_execute((6*1024*1024) / HOST_FPS, skipFrames);
 #else
-
         tlcs_execute((6*1024*1024) / HOST_FPS);
 #endif
-#ifdef PSP
+
+#ifdef TARGET_PSP
         HandleStateSaving();
-#endif
+#endif /* TARGET_PSP */
     }
 
 #ifdef TCLS900H_PROFILING

@@ -56,6 +56,10 @@ static int ScreenX, ScreenY, ScreenW, ScreenH;
 static int ClearScreen;
 static int Rewinding;
 static int frames_until_save;
+static u32 TicksPerUpdate;
+static u64 LastTick;
+static u64 CurrentTick;
+static u8 RewindEnabled;
 
 static void AudioCallback(pl_snd_sample* buf,
                           unsigned int samples,
@@ -96,10 +100,16 @@ void graphics_paint()
 
   /* Blit screen */
   sceGuDisable(GU_BLEND);
-  pspVideoPutImage(Screen,
-                   ScreenX, ScreenY,
-                   ScreenW, ScreenH);
+  pspVideoPutImage(Screen, ScreenX, ScreenY, ScreenW, ScreenH);
   sceGuEnable(GU_BLEND);
+
+  /* Wait if needed */
+  if (psp_options.update_freq)
+  {
+    do { sceRtcGetCurrentTick(&CurrentTick); }
+    while (CurrentTick - LastTick < TicksPerUpdate);
+    LastTick = CurrentTick;
+  }
 
   /* Show FPS counter */
   if (psp_options.show_fps)
@@ -149,8 +159,30 @@ void RunEmulation()
   /* Initialize performance counter */
   pl_perf_init_counter(&FpsCounter);
   ClearScreen = 1;
-  Rewinding = 0;
   frames_until_save = 0;
+  Rewinding = 0;
+
+  /* Determine if at least 1 button is mapped to 'rewind' */
+  RewindEnabled = 0;
+  psp_ctrl_mask_to_index_map_t *current_mapping = physical_to_emulated_button_map;
+  for (; current_mapping->mask; current_mapping++)
+  {
+    u32 code = current_map.button_map[current_mapping->index];
+    if ((code & SPC) && (CODE_MASK(code) == SPC_REWIND))
+    {
+      RewindEnabled = 1; /* Rewind button is mapped */
+      break;
+    }
+  }
+
+  /* Recompute update frequency */
+  u32 TicksPerSecond = sceRtcGetTickResolution();
+  if (psp_options.update_freq)
+  {
+    TicksPerUpdate = TicksPerSecond
+      / (psp_options.update_freq / (psp_options.frame_skip + 1));
+    sceRtcGetCurrentTick(&LastTick);
+  }
 
   /* Resume sound */
   pl_snd_resume(0);
@@ -219,6 +251,9 @@ void UpdateInputState()
 
 void HandleStateSaving()
 {
+  if (!RewindEnabled)
+    return;
+
   /* Rewind/save state */
   if (!Rewinding)
   {
@@ -239,15 +274,17 @@ static void AudioCallback(pl_snd_sample* buf,
                           unsigned int samples,
                           void *userdata)
 {
+  int length_bytes = samples << 1; /* 2 bytes per sample */
+
   if (!Rewinding)
   {
-    int length_bytes = samples << 1; /* 2 bytes per sample */
     sound_update((_u16*)buf, length_bytes); //Get sound data
     dac_update((_u16*)buf, length_bytes);
   }
   else /* Render silence */
-    for (unsigned int i = 0; i < samples; i++) 
-      buf[i].stereo.l = buf[i].stereo.r = 0;
+  {
+    memset(buf, 0, length_bytes);
+  }
 }
 
 /* Release emulation resources */

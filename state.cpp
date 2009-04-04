@@ -9,7 +9,7 @@
 // state.cpp: state saving
 //
 //  01/20/2009 Cleaned up interface, added loading from memory
-//             Moved signature-related stuff out of RACE_STATE (A.K.)
+//             Moved signature-related stuff out of race_state (A.K.)
 //  09/11/2008 Initial version (Akop Karapetyan)
 //
 //////////////////////////////////////////////////////////////////////
@@ -27,16 +27,15 @@
 #undef PC
 #endif
 
-/* sizeof() tends to report a larger size, IIRC */
-/* #define RACE_STATE_HEADER_SIZE    sizeof(struct RACE_STATE_HEADER) */
-#define RACE_STATE_HEADER_SIZE    0x41
-struct RACE_STATE_HEADER
+#define CURRENT_SAVE_STATE_VERSION 0x11
+
+struct race_state_header
 {
-  u8 state_version;       /* State version, currently = 0x10 */
+  u8 state_version;       /* State version */
   u8 rom_signature[0x40]; /* Rom signature, for verification */
 };
 
-struct RACE_STATE
+struct race_state_0x11
 {
 	/* Memory */
 	u8 ram[0xc000];
@@ -64,25 +63,62 @@ struct RACE_STATE
   u8 ldcRegs[64];
 };
 
-static int state_store(struct RACE_STATE *rs);
-static int state_restore(struct RACE_STATE *rs);
+struct race_state_0x10 /* Older state format */
+{
+  //Save state version
+  u8 state_version; // = 0x10
+ 
+  //Rom signature
+  u8 rom_signature[0x40];
+ 
+	//Memory
+	u8 ram[0xc000];
+  u8 cpuram[0x08a0];// 0xC000]; 0x38000 
+ 
+	//TLCS-900h Registers
+	u32 pc, sr;
+	u8 f_dash;
+	u32 gpr[23];
+ 
+  //Z80 Registers
+  cz80_struc RACE_cz80_struc;
+  u32 PC_offset;
+  s32 Z80_ICount;
+ 
+  //Sound Chips
+  int sndCycles;
+  SoundChip toneChip;
+  SoundChip noiseChip;
+ 
+	//Timers
+  int timer0, timer1, timer2, timer3;
+ 
+	//DMA
+  u8 ldcRegs[64];
+};
+
+typedef struct race_state_0x11 race_state_t;
+
+static int state_store(race_state_t *rs);
+static int state_restore(race_state_t *rs);
+static int state_restore_0x10(FILE *stream);
 
 int state_store_mem(void *state)
 {
-  return state_store((struct RACE_STATE*)state);
+  return state_store((race_state_t*)state);
 }
 
 int state_restore_mem(void *state)
 {
-  return state_restore((struct RACE_STATE*)state);
+  return state_restore((race_state_t*)state);
 }
 
 int state_get_size()
 {
-  return sizeof(struct RACE_STATE);
+  return sizeof(race_state_t);
 }
 
-static int state_store(struct RACE_STATE *rs)
+static int state_store(race_state_t *rs)
 {
   int i = 0;
 
@@ -151,7 +187,7 @@ static int state_store(struct RACE_STATE *rs)
   return 1;
 }
 
-static int state_restore(struct RACE_STATE *rs)
+static int state_restore(race_state_t *rs)
 {
   int i = 0;
 
@@ -226,19 +262,29 @@ static int state_restore(struct RACE_STATE *rs)
 
 int state_restore(FILE *stream)
 {
+  /* Note current position (in case of compatibility rewinds */
+  long read_pos = ftell(stream);
+
   /* Read header */
-  struct RACE_STATE_HEADER rsh;
-  if (fread(&rsh, RACE_STATE_HEADER_SIZE, 1, stream) < 1)
+  struct race_state_header rsh;
+  if (fread(&rsh, sizeof(rsh), 1, stream) < 1)
     return 0;
 
-  /* Verify state version & signature */
-  if (rsh.state_version != 0x10)
-    return 0;
+  /* Verify state version */
+  if (rsh.state_version == 0x10)
+  {
+    fseek(stream, read_pos, SEEK_SET); /* Rewind and load old format */
+    return state_restore_0x10(stream);
+  }
+  else if (rsh.state_version != CURRENT_SAVE_STATE_VERSION)
+    return 0; /* Unsupported version */
+
+  /* Verify ROM signature */
   if (memcmp(mainrom, rsh.rom_signature, sizeof(rsh.rom_signature)) != 0)
     return 0;
 
   /* Read state data */
-  struct RACE_STATE rs;
+  race_state_t rs;
   if (fread(&rs, sizeof(rs), 1, stream) < 1)
     return 0;
 
@@ -249,17 +295,17 @@ int state_restore(FILE *stream)
 int state_store(FILE *stream)
 {
   /* Set version & ROM signature information */
-  struct RACE_STATE_HEADER rsh;
-  rsh.state_version = 0x10;
+  struct race_state_header rsh;
+  rsh.state_version = CURRENT_SAVE_STATE_VERSION;
   memcpy(rsh.rom_signature, mainrom, sizeof(rsh.rom_signature));
 
   /* Initialize state data */
-  struct RACE_STATE rs;
+  race_state_t rs;
   if (!state_store(&rs))
     return 0;
 
   /* Write to file */
-  if (fwrite(&rsh, RACE_STATE_HEADER_SIZE, 1, stream) < 1)
+  if (fwrite(&rsh, sizeof(rsh), 1, stream) < 1)
     return 0;
   if (fwrite(&rs, sizeof(rs), 1, stream) < 1)
     return 0;
@@ -278,6 +324,7 @@ int state_store(char* filename)
 
   return status;
 }
+
 int state_restore(char* filename)
 {
   FILE *stream;
@@ -290,3 +337,85 @@ int state_restore(char* filename)
   return status;
 }
 
+static int state_restore_0x10(FILE *stream)
+{
+  struct race_state_0x10 rs;
+  if (fread(&rs, sizeof(rs), 1, stream) < 1)
+    return 0;
+ 
+  // Verify state version
+  if (rs.state_version != 0x10)
+    return 0;
+ 
+  // Verify ROM signature
+  if (memcmp(mainrom, rs.rom_signature, sizeof(rs.rom_signature)) != 0)
+    return 0;
+ 
+  //TLCS-900h Registers
+  gen_regsPC = rs.pc;
+  gen_regsSR = rs.sr;
+  F2 = rs.f_dash;
+ 
+  int i = 0;
+  gen_regsXWA0 = rs.gpr[i++];
+  gen_regsXBC0 = rs.gpr[i++];
+  gen_regsXDE0 = rs.gpr[i++];
+  gen_regsXHL0 = rs.gpr[i++];
+ 
+  gen_regsXWA1 = rs.gpr[i++];
+  gen_regsXBC1 = rs.gpr[i++];
+  gen_regsXDE1 = rs.gpr[i++];
+  gen_regsXHL1 = rs.gpr[i++];
+ 
+  gen_regsXWA2 = rs.gpr[i++];
+  gen_regsXBC2 = rs.gpr[i++];
+  gen_regsXDE2 = rs.gpr[i++];
+  gen_regsXHL2 = rs.gpr[i++];
+ 
+  gen_regsXWA3 = rs.gpr[i++];
+  gen_regsXBC3 = rs.gpr[i++];
+  gen_regsXDE3 = rs.gpr[i++];
+  gen_regsXHL3 = rs.gpr[i++];
+ 
+  gen_regsXIX = rs.gpr[i++];
+  gen_regsXIY = rs.gpr[i++];
+  gen_regsXIZ = rs.gpr[i++];
+  gen_regsXSP = rs.gpr[i++];
+ 
+  gen_regsSP = rs.gpr[i++];
+  gen_regsXSSP = rs.gpr[i++];
+  gen_regsXNSP = rs.gpr[i++];
+ 
+  //Z80 Registers
+  extern cz80_struc *RACE_cz80_struc;
+  extern s32 Z80_ICount;
+  int size_of_z80 = 
+    (u32)(&(RACE_cz80_struc->CycleSup)) - (u32)(&(RACE_cz80_struc->BC));
+ 
+  memcpy(RACE_cz80_struc, &rs.RACE_cz80_struc, size_of_z80);
+  Z80_ICount = rs.Z80_ICount;
+  Cz80_Set_PC(RACE_cz80_struc, rs.PC_offset);
+ 
+  //Sound Chips
+  extern int sndCycles;
+  sndCycles = rs.sndCycles;
+  memcpy(&toneChip, &rs.toneChip, sizeof(SoundChip));
+  memcpy(&noiseChip, &rs.noiseChip, sizeof(SoundChip));
+ 
+  //Timers
+  timer0 = rs.timer0;
+  timer1 = rs.timer1;
+  timer2 = rs.timer2;
+  timer3 = rs.timer3;
+ 
+  //DMA
+  memcpy(&ldcRegs, &rs.ldcRegs, sizeof(ldcRegs));
+ 
+  //Memory
+  memcpy(mainram, rs.ram, sizeof(rs.ram));
+  memcpy(&mainram[0x20000], rs.cpuram, sizeof(rs.cpuram));
+ 
+  tlcs_reinit();
+ 
+  return 1;
+}

@@ -1080,6 +1080,7 @@ static void psp_load_options()
   psp_options.frame_skip = pl_ini_get_int(&file, "Video", "Frame Skipping", 0);
   psp_options.clock_freq = pl_ini_get_int(&file, "Video", "PSP Clock Frequency", 333);
   psp_options.show_fps = pl_ini_get_int(&file, "Video", "Show FPS", 0);
+  psp_options.update_freq = pl_ini_get_int(&file, "Video", "Update Frequency", HOST_FPS);
   psp_options.rewind_save_rate = pl_ini_get_int(&file, "Enhancements", "Rewind Save Rate", 5);
   pl_ini_get_string(&file, "File", "Game Path", NULL, 
                     GamePath, sizeof(GamePath));
@@ -1114,6 +1115,8 @@ static int psp_save_options()
                  psp_options.frame_skip);
   pl_ini_set_int(&file, "Video", "PSP Clock Frequency", 
                  psp_options.clock_freq);
+  pl_ini_set_int(&file, "Video", "Update Frequency", 
+                 psp_options.update_freq);
   pl_ini_set_int(&file, "Video", "Show FPS", 
                  psp_options.show_fps);
   pl_ini_set_int(&file, "Menu", "Control Mode", 
